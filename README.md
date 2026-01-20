@@ -1,7 +1,3 @@
-# LCF Inference
-
-Documentation, scripts, and examples for running AI inference on various Leadership Computing Facility (LCF) machines.
-
 ## Overview
 
 This repository provides guides and tools for deploying large language model inference on high-performance computing systems at ALCF and OLCF. The documentation covers multiple supercomputing platforms with their specific hardware configurations and software stacks.
