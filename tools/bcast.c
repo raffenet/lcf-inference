@@ -23,8 +23,6 @@ int main(int argc, char **argv) {
     const char *destdir;
     char command[4096];
     int rank;
-
-    // Fix: Declare and initialize the variable tracking total size
     unsigned long long total_bytes = 0;
 
     clock_gettime(CLOCK_MONOTONIC, &start);
@@ -62,14 +60,12 @@ int main(int argc, char **argv) {
             // Use cwd as base if no path provided
         }
 
-        // REMOVED: The pre-calculation "tar --totals" step that was causing the hang.
-        // We now start the real read immediately.
         snprintf(command, sizeof(command), "tar -C %s -cf - %s", left, right);
         archive = popen(command, "r");
         CHECK_ERROR(!archive, "popen (read)");
         free(dup);
 
-        printf("cptotmp: Streaming %s to %s (Immediate Start)...\n", argv[1], destdir);
+        printf("bcast: Broadcasting %s to %s ()...\n", argv[1], destdir);
     }
 
     // --- ALL RANKS: OPEN WRITE STREAM ---
@@ -84,10 +80,8 @@ int main(int argc, char **argv) {
     void *buf = malloc(BUFFER_SIZE);
     assert(buf);
 
-    int active = 1;
-
-    while (active) {
-        long chunk_size = 0;
+    while (1) {
+        int chunk_size = 0;
 
         // Rank 0: Read until BUFFER_SIZE is full or EOF
         if (rank == 0) {
@@ -109,7 +103,7 @@ int main(int argc, char **argv) {
         }
 
         // 1. Broadcast how much data is in this chunk (0 means Done)
-        MPI_Bcast(&chunk_size, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&chunk_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
         if (chunk_size == 0) {
             break;
@@ -132,7 +126,9 @@ int main(int argc, char **argv) {
         total_bytes += chunk_size;
     }
 
-    if (rank == 0) pclose(archive);
+    if (rank == 0) {
+        pclose(archive);
+    }
     pclose(dest);
     free(buf);
 
