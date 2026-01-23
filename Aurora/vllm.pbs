@@ -6,6 +6,8 @@
 #PBS -l filesystems=flare:home
 #PBS -A ModCon
 
+module load frameworks
+
 export HTTP_PROXY=http://proxy.alcf.anl.gov:3128
 export HTTPS_PROXY=http://proxy.alcf.anl.gov:3128
 export http_proxy=http://proxy.alcf.anl.gov:3128
@@ -21,12 +23,14 @@ fi
 
 # --- 0. PREPARE COPY TOOL ---
 # Path to your C source file (Adjust if needed, assuming it's in the submission dir)
-BCAST_SRC="${PBS_O_WORKDIR}/tools/bcast.c"
+TOOLS_DIR="${PBS_O_WORKDIR}/tools"
 BCAST_BIN="${PBS_O_WORKDIR}/bcast"
 
-# Compile the tool
-module load frameworks
-mpicc -o "$BCAST_BIN" "$BCAST_SRC"
+# Compile the bcast tool
+pushd $TOOLS_DIR
+make bcast
+cp bcast $BCAST_BIN
+popd
 
 # --- OPTIMIZED ENV VARS ---
 # Enable these for better broadcast performance on Aurora
