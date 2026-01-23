@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     if (argc < 2) {
-        if (rank == 0) fprintf(stderr, "Usage: cptotmp <src> [dest]\n");
+        if (rank == 0) fprintf(stderr, "Usage: bcast <src> [dest]\n");
         MPI_Finalize();
         return 1;
     }
@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
 
     if (rank == 0) {
         double gb = (double)total_bytes / (1024.0 * 1024.0 * 1024.0);
-        printf("cptotmp: Transferred %.2f GiB in %.2f seconds (%.2f GiB/s)\n",
+        printf("bcast: Transferred %.2f GiB in %.2f seconds (%.2f GiB/s)\n",
             gb, max_time, gb/max_time);
     }
 
