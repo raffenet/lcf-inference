@@ -48,7 +48,7 @@ For small models that fit within a single tile's memory (64 GB), no additional c
 The following command serves `meta-llama/Llama-2-7b-chat-hf` on a single tile of a single node:
 ```bash linenums="1"
 module load frameworks
-export NUMEXPR_MAX_THREADS=208 # number of CPU threads on Aurora node
+export NUMEXPR_MAX_THREADS=208
 export CCL_PROCESS_LAUNCHER=torchrun
 export HF_HOME=/flare/datasets/model-weights
 export HF_TOKEN=<your_token>
@@ -173,7 +173,7 @@ The following script demonstrates how to serve the `meta-llama/Llama-3.3-70B-Ins
 
 ```bash linenums="1"
 module load frameworks
-export NUMEXPR_MAX_THREADS=208 # number of CPU threads on Aurora node
+export NUMEXPR_MAX_THREADS=208
 export CCL_PROCESS_LAUNCHER=torchrun
 export HF_HOME=/flare/datasets/model-weights
 export HF_TOKEN=<your_token>
