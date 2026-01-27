@@ -29,7 +29,7 @@ INFO 11-06 16:55:07 [__init__.py:241] Automatically detected platform xpu.
 
 ## Model Weights
 
-Model weights for commonly used open-weight models are downloaded and available in the `/flare/datasets/model-weights/hub` directory on Aurora. However accessing these weights from more than a single GPU can be very time-consuming. We recommend reading the weights once from the parallel filesystem and distributing them to node local storage with MPI using [tools/bcast.c].
+Model weights for commonly used open-weight models are downloaded and available in the `/flare/datasets/model-weights/hub` directory on Aurora. However accessing these weights from more than a single GPU can be very time-consuming. For multiple GPU scenarios, We recommend reading the weights once from the parallel filesystem and distributing them to node local storage with MPI using [tools/bcast.c].
 ```bash linenums="1"
 export HF_HOME="/tmp/hf_home"
 ```
@@ -43,7 +43,7 @@ export HF_TOKEN="YOUR_HF_TOKEN"
 
 For small models that fit within a single tile's memory (64 GB), no additional configuration is required to serve the model. The model will run on a single tile. Models with fewer than 7 billion parameters typically fit within a single tile.
 
-#### Using Single Tile
+#### Using Single GPU Tile
 
 The following command serves `meta-llama/Llama-2-7b-chat-hf` on a single tile of a single node:
 ```bash linenums="1"
@@ -167,7 +167,7 @@ Loading safetensors checkpoint shards: 100% Completed | 2/2 [00:04<00:00,  2.05s
 
 </details>
 
-#### Serve Medium Models Using Multiple Tiles
+#### Serve Medium Models Using Multiple GPU Tiles
 
 The following script demonstrates how to serve the `meta-llama/Llama-3.3-70B-Instruct` model across 8 tiles on a single node using tensor parallelism:
 
@@ -175,7 +175,7 @@ The following script demonstrates how to serve the `meta-llama/Llama-3.3-70B-Ins
 module load frameworks
 export NUMEXPR_MAX_THREADS=208
 export CCL_PROCESS_LAUNCHER=torchrun
-export HF_HOME=/flare/datasets/model-weights
+export HF_HOME=/tmp/hf_home
 export HF_TOKEN=<your_token>
 # copy weights to /tmp for faster loading
 mpiexec -ppn 1 ./bcast /flare/datasets/model-weights/hub/models--meta-llama--Llama-3.3-70B-Instruct /tmp/hf_home/hub
