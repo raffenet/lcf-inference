@@ -108,8 +108,10 @@ def _wait_for_instances(
     """Poll /health on each instance until all respond 200 or timeout expires."""
     ready = set()
     deadline = time.monotonic() + timeout
+    cycle = 0
 
     while time.monotonic() < deadline:
+        cycle += 1
         for node, port in endpoints:
             if (node, port) in ready:
                 continue
@@ -123,8 +125,12 @@ def _wait_for_instances(
                             f"({len(ready)}/{len(endpoints)})",
                             file=sys.stderr,
                         )
-            except (urllib.error.URLError, OSError):
-                pass
+            except (urllib.error.URLError, OSError) as exc:
+                reason = getattr(exc, "reason", exc)
+                print(
+                    f"[poll {cycle}] {node}:{port} not ready: {reason}",
+                    file=sys.stderr,
+                )
 
         if len(ready) == len(endpoints):
             return
