@@ -4,7 +4,7 @@ import argparse
 import sys
 
 from .config import AegisConfig, load_config, merge_cli_args
-from .launcher import launch_instances, stage_weights
+from .launcher import launch_instances, stage_conda_env, stage_weights
 from .scheduler import generate_pbs_script, submit_job
 
 
@@ -34,6 +34,10 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--extra-vllm-args", nargs="*", dest="extra_vllm_args",
         help="Additional arguments passed to vllm serve",
+    )
+    parser.add_argument(
+        "--conda-env", type=str, dest="conda_env",
+        help="Path to a conda-pack tarball to distribute and activate on all nodes",
     )
 
 
@@ -74,6 +78,7 @@ def cmd_launch(args) -> None:
         print("Error: --model is required.", file=sys.stderr)
         sys.exit(1)
 
+    stage_conda_env(config)
     stage_weights(config)
     launch_instances(config)
 

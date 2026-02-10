@@ -6,7 +6,12 @@ export http_proxy=http://proxy.alcf.anl.gov:3128
 export https_proxy=http://proxy.alcf.anl.gov:3128
 export no_proxy=localhost,127.0.0.1
 
+{% if conda_env %}
+mkdir -p /tmp/conda_env && tar -xzf /tmp/{{ conda_env.split('/')[-1] }} -C /tmp/conda_env
+source /tmp/conda_env/bin/activate
+{% else %}
 module load frameworks
+{% endif %}
 export CCL_PROCESS_LAUNCHER=torchrun
 export NUMEXPR_MAX_THREADS=208
 export TMPDIR=/tmp

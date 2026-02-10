@@ -29,6 +29,39 @@ def _get_allocated_nodes() -> list[str]:
     return nodes
 
 
+def stage_conda_env(config: AegisConfig) -> None:
+    """Compile bcast (if needed) and broadcast a conda-pack tarball to all nodes."""
+    if not config.conda_env:
+        return
+
+    tools_dir = Path(os.environ.get("PBS_O_WORKDIR", ".")) / "tools"
+    bcast_bin = tools_dir / "bcast"
+
+    if not bcast_bin.exists():
+        print("Compiling bcast...", file=sys.stderr)
+        result = subprocess.run(["make", "bcast"], cwd=tools_dir)
+        if result.returncode != 0:
+            print("Failed to compile bcast.", file=sys.stderr)
+            sys.exit(1)
+
+    tarball = config.conda_env
+    print(f"Staging conda env: {tarball} -> /tmp", file=sys.stderr)
+
+    env = os.environ.copy()
+    env["MPIR_CVAR_CH4_OFI_ENABLE_MULTI_NIC_STRIPING"] = "1"
+    env["MPIR_CVAR_CH4_OFI_MAX_NICS"] = "4"
+
+    result = subprocess.run(
+        ["mpiexec", "-ppn", "1", "--cpu-bind", "numa", str(bcast_bin), tarball, "/tmp"],
+        env=env,
+    )
+    if result.returncode != 0:
+        print("Conda env staging failed.", file=sys.stderr)
+        sys.exit(1)
+
+    print("Conda env staging complete.", file=sys.stderr)
+
+
 def stage_weights(config: AegisConfig) -> None:
     """Compile bcast (if needed) and broadcast model weights to local storage."""
     if not config.model_source:
@@ -92,6 +125,7 @@ def launch_instances(config: AegisConfig) -> None:
             port=port,
             hf_home=config.hf_home,
             extra_vllm_args=config.extra_vllm_args,
+            conda_env=config.conda_env,
         )
 
         # Write to a temp file

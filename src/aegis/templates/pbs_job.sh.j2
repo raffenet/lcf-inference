@@ -10,7 +10,9 @@
 #PBS -o aegis_output.log
 #PBS -e aegis_error.log
 
+{% if not config.conda_env %}
 module load frameworks
+{% endif %}
 export TMPDIR=/tmp
 
 export HTTP_PROXY=http://proxy.alcf.anl.gov:3128
@@ -25,6 +27,23 @@ if [ -z "${HF_TOKEN:-}" ]; then
     echo "Error: HF_TOKEN not set. Please export it and pass with qsub -v HF_TOKEN"
     exit 1
 fi
+
+{% if config.conda_env %}
+# --- STAGE CONDA ENV ---
+TOOLS_DIR="${PBS_O_WORKDIR}/tools"
+BCAST_BIN="${PBS_O_WORKDIR}/bcast"
+
+pushd $TOOLS_DIR
+make bcast
+cp bcast $BCAST_BIN
+popd
+
+export MPIR_CVAR_CH4_OFI_ENABLE_MULTI_NIC_STRIPING=1
+export MPIR_CVAR_CH4_OFI_MAX_NICS=4
+
+echo "Staging conda env {{ config.conda_env }} to /tmp..."
+mpiexec -ppn 1 --cpu-bind numa $BCAST_BIN "{{ config.conda_env }}" "/tmp"
+{% endif %}
 
 {% if config.model_source %}
 # --- STAGE MODEL WEIGHTS ---
@@ -50,5 +69,7 @@ aegis launch \
     --tensor-parallel-size {{ config.tensor_parallel_size }} \
     --port-start {{ config.port_start }} \
     --hf-home "{{ config.hf_home }}" \
+{% if config.conda_env %}    --conda-env "{{ config.conda_env }}" \
+{% endif %}
 {% if config.extra_vllm_args %}    --extra-vllm-args {{ config.extra_vllm_args | join(' ') }} \
 {% endif %}

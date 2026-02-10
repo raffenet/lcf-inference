@@ -24,6 +24,7 @@ class AegisConfig:
     account: str = ""
     filesystems: str = "flare:home"
     extra_vllm_args: list[str] = field(default_factory=list)
+    conda_env: Optional[str] = None
 
     @property
     def nodes_needed(self) -> int:
