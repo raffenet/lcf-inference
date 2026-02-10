@@ -106,6 +106,8 @@ def _wait_for_instances(
     timeout: int = 1200,
 ) -> None:
     """Poll /health on each instance until all respond 200 or timeout expires."""
+    # Bypass http_proxy env vars — health checks target internal compute nodes.
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     ready = set()
     deadline = time.monotonic() + timeout
     cycle = 0
@@ -117,7 +119,7 @@ def _wait_for_instances(
                 continue
             url = f"http://{node}:{port}/health"
             try:
-                with urllib.request.urlopen(url, timeout=5) as resp:
+                with opener.open(url, timeout=5) as resp:
                     if resp.status == 200:
                         ready.add((node, port))
                         print(
