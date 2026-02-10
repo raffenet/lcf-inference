@@ -109,6 +109,10 @@ def launch_instances(config: AegisConfig) -> None:
         )
         sys.exit(1)
 
+    # Write temp files to the shared filesystem so remote nodes can access them.
+    # PBS sets TMPDIR to a node-local path, so we use PBS_O_WORKDIR instead.
+    shared_tmpdir = os.environ.get("PBS_O_WORKDIR", None)
+
     env = _get_template_env()
     template = env.get_template("instance.sh.j2")
 
@@ -128,9 +132,10 @@ def launch_instances(config: AegisConfig) -> None:
             conda_env=config.conda_env,
         )
 
-        # Write to a temp file
+        # Write to a temp file on the shared filesystem
         script_file = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".sh", prefix=f"aegis_instance_{i}_", delete=False
+            mode="w", suffix=".sh", prefix=f"aegis_instance_{i}_",
+            dir=shared_tmpdir, delete=False,
         )
         script_file.write(script_content)
         script_file.close()
@@ -138,7 +143,8 @@ def launch_instances(config: AegisConfig) -> None:
 
         # Build hostfile for this instance's nodes
         hostfile = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".hosts", prefix=f"aegis_hosts_{i}_", delete=False
+            mode="w", suffix=".hosts", prefix=f"aegis_hosts_{i}_",
+            dir=shared_tmpdir, delete=False,
         )
         for node in instance_nodes:
             hostfile.write(f"{node}\n")
