@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Editor backup files
+*~
+.DS_Store
+
+# Compiled binaries
+*.o
+tools/bcast
