@@ -11,6 +11,7 @@
 #PBS -e aegis_error.log
 
 module load frameworks
+export TMPDIR=/tmp
 
 export HTTP_PROXY=http://proxy.alcf.anl.gov:3128
 export HTTPS_PROXY=http://proxy.alcf.anl.gov:3128
