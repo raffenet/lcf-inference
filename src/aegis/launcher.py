@@ -351,5 +351,14 @@ def launch_instances(config: AegisConfig) -> None:
     _update_instances_status(endpoints, redis_host, config.redis_port,
                              ServiceStatus.HEALTHY)
 
+    # Spawn a background heartbeat monitor per instance
+    for node, port in endpoints:
+        service_id = f"vllm-{node}-{port}"
+        subprocess.Popen(
+            [sys.executable, "-m", "aegis.heartbeat",
+             service_id, node, str(port), redis_host, str(config.redis_port)],
+        )
+        print(f"Started heartbeat monitor for {service_id}", file=sys.stderr)
+
     print(f"All {total_instances} instance(s) are healthy.", file=sys.stderr)
     print(f"Redis service registry: {redis_host}:{config.redis_port}", file=sys.stderr)
