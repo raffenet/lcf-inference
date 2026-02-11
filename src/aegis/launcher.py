@@ -67,7 +67,8 @@ def stage_conda_env(config: AegisConfig) -> None:
 
 def stage_weights(config: AegisConfig) -> None:
     """Compile bcast (if needed) and broadcast model weights to local storage."""
-    if not config.model_source:
+    sources = [m.model_source for m in config.models if m.model_source]
+    if not sources:
         print("No model_source specified, skipping weight staging.", file=sys.stderr)
         return
 
@@ -83,19 +84,19 @@ def stage_weights(config: AegisConfig) -> None:
             sys.exit(1)
 
     dest = f"{config.hf_home}/hub"
-    print(f"Staging weights: {config.model_source} -> {dest}", file=sys.stderr)
-
     env = os.environ.copy()
     env["MPIR_CVAR_CH4_OFI_ENABLE_MULTI_NIC_STRIPING"] = "1"
     env["MPIR_CVAR_CH4_OFI_MAX_NICS"] = "4"
 
-    result = subprocess.run(
-        ["mpiexec", "-ppn", "1", "--cpu-bind", "numa", str(bcast_bin), config.model_source, dest],
-        env=env,
-    )
-    if result.returncode != 0:
-        print("Weight staging failed.", file=sys.stderr)
-        sys.exit(1)
+    for source in sources:
+        print(f"Staging weights: {source} -> {dest}", file=sys.stderr)
+        result = subprocess.run(
+            ["mpiexec", "-ppn", "1", "--cpu-bind", "numa", str(bcast_bin), source, dest],
+            env=env,
+        )
+        if result.returncode != 0:
+            print(f"Weight staging failed for {source}.", file=sys.stderr)
+            sys.exit(1)
 
     print("Weight staging complete.", file=sys.stderr)
 
@@ -151,11 +152,11 @@ def _wait_for_instances(
 def launch_instances(config: AegisConfig) -> None:
     """Launch vLLM instances across allocated nodes."""
     nodes = _get_allocated_nodes()
-    nodes_per_instance = config.nodes_per_instance
+    total_nodes_needed = config.nodes_needed
 
-    if len(nodes) < config.instances * nodes_per_instance:
+    if len(nodes) < total_nodes_needed:
         print(
-            f"Error: Need {config.instances * nodes_per_instance} nodes but only {len(nodes)} allocated.",
+            f"Error: Need {total_nodes_needed} nodes but only {len(nodes)} allocated.",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -170,64 +171,72 @@ def launch_instances(config: AegisConfig) -> None:
     processes = []
     endpoints = []
     tmp_files = []
-    for i in range(config.instances):
-        port = config.port_start + i
-        start_node = i * nodes_per_instance
-        instance_nodes = nodes[start_node : start_node + nodes_per_instance]
-        endpoints.append((instance_nodes[0], port))
+    instance_idx = 0
+    node_offset = 0
 
-        # Render the per-instance script
-        script_content = template.render(
-            model=config.model,
-            tensor_parallel_size=config.tensor_parallel_size,
-            port=port,
-            hf_home=config.hf_home,
-            extra_vllm_args=config.extra_vllm_args,
-            conda_env=config.conda_env,
-        )
+    for model_cfg in config.models:
+        for j in range(model_cfg.instances):
+            port = config.port_start + instance_idx
+            npi = model_cfg.nodes_per_instance
+            instance_nodes = nodes[node_offset : node_offset + npi]
+            endpoints.append((instance_nodes[0], port))
 
-        # Write to a temp file on the shared filesystem
-        script_file = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".sh", prefix=f"aegis_instance_{i}_",
-            dir=shared_tmpdir, delete=False,
-        )
-        script_file.write(script_content)
-        script_file.close()
-        os.chmod(script_file.name, 0o755)
-        tmp_files.append(script_file.name)
+            # Render the per-instance script
+            script_content = template.render(
+                model=model_cfg.model,
+                tensor_parallel_size=model_cfg.tensor_parallel_size,
+                port=port,
+                hf_home=config.hf_home,
+                extra_vllm_args=model_cfg.extra_vllm_args,
+                conda_env=config.conda_env,
+            )
 
-        # Build hostfile for this instance's nodes
-        hostfile = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".hosts", prefix=f"aegis_hosts_{i}_",
-            dir=shared_tmpdir, delete=False,
-        )
-        for node in instance_nodes:
-            hostfile.write(f"{node}\n")
-        hostfile.close()
-        tmp_files.append(hostfile.name)
+            # Write to a temp file on the shared filesystem
+            script_file = tempfile.NamedTemporaryFile(
+                mode="w", suffix=".sh", prefix=f"aegis_instance_{instance_idx}_",
+                dir=shared_tmpdir, delete=False,
+            )
+            script_file.write(script_content)
+            script_file.close()
+            os.chmod(script_file.name, 0o755)
+            tmp_files.append(script_file.name)
 
-        print(
-            f"Launching instance {i}: nodes={instance_nodes}, port={port}",
-            file=sys.stderr,
-        )
+            # Build hostfile for this instance's nodes
+            hostfile = tempfile.NamedTemporaryFile(
+                mode="w", suffix=".hosts", prefix=f"aegis_hosts_{instance_idx}_",
+                dir=shared_tmpdir, delete=False,
+            )
+            for node in instance_nodes:
+                hostfile.write(f"{node}\n")
+            hostfile.close()
+            tmp_files.append(hostfile.name)
 
-        proc = subprocess.Popen(
-            [
-                "mpiexec",
-                "-ppn", "1",
-                "--hostfile", hostfile.name,
-                "-o", f"{i}/%h/out.%R",
-                script_file.name,
-            ],
-            env=os.environ,
-        )
-        processes.append(proc)
+            print(
+                f"Launching instance {instance_idx} ({model_cfg.model}): "
+                f"nodes={instance_nodes}, port={port}",
+                file=sys.stderr,
+            )
 
-    print(f"All {config.instances} instance(s) launched. Waiting for health checks...", file=sys.stderr)
+            proc = subprocess.Popen(
+                [
+                    "mpiexec",
+                    "-ppn", "1",
+                    "--hostfile", hostfile.name,
+                    "-o", f"{instance_idx}/%h/out.%R",
+                    script_file.name,
+                ],
+                env=os.environ,
+            )
+            processes.append(proc)
+            instance_idx += 1
+            node_offset += npi
+
+    total_instances = instance_idx
+    print(f"All {total_instances} instance(s) launched. Waiting for health checks...", file=sys.stderr)
 
     _wait_for_instances(endpoints)
 
     for path in tmp_files:
         os.unlink(path)
 
-    print(f"All {config.instances} instance(s) are healthy.", file=sys.stderr)
+    print(f"All {total_instances} instance(s) are healthy.", file=sys.stderr)

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from jinja2 import Environment, PackageLoader
 
-from .config import AegisConfig
+from .config import AegisConfig, config_to_yaml
 
 
 def _get_template_env() -> Environment:
@@ -21,7 +21,8 @@ def generate_pbs_script(config: AegisConfig) -> str:
     """Render the PBS batch script from the Jinja2 template."""
     env = _get_template_env()
     template = env.get_template("pbs_job.sh.j2")
-    return template.render(config=config)
+    config_yaml = config_to_yaml(config)
+    return template.render(config=config, config_yaml=config_yaml)
 
 
 def submit_job(script: str) -> str:

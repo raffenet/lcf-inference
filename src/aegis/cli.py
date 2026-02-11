@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from .config import AegisConfig, load_config, merge_cli_args
+from .config import AegisConfig, load_config, merge_cli_args, _normalize_models
 from .launcher import launch_instances, stage_conda_env, stage_weights
 from .scheduler import generate_pbs_script, submit_job
 
@@ -47,15 +47,17 @@ def _build_config(args) -> AegisConfig:
         config = load_config(args.config)
     else:
         config = AegisConfig()
-    return merge_cli_args(config, args)
+    merge_cli_args(config, args)
+    _normalize_models(config)
+    return config
 
 
 def cmd_submit(args) -> None:
     """Generate and submit a PBS batch job."""
     config = _build_config(args)
 
-    if not config.model:
-        print("Error: --model is required.", file=sys.stderr)
+    if not config.models:
+        print("Error: --model is required (or provide a 'models' list in the config file).", file=sys.stderr)
         sys.exit(1)
     if not config.account:
         print("Error: --account is required.", file=sys.stderr)
@@ -74,8 +76,8 @@ def cmd_launch(args) -> None:
     """Run inside an existing allocation: stage weights and launch vLLM instances."""
     config = _build_config(args)
 
-    if not config.model:
-        print("Error: --model is required.", file=sys.stderr)
+    if not config.models:
+        print("Error: --model is required (or provide a 'models' list in the config file).", file=sys.stderr)
         sys.exit(1)
 
     stage_conda_env(config)

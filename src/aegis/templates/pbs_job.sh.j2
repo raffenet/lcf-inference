@@ -45,7 +45,8 @@ echo "Staging conda env {{ config.conda_env }} to /tmp..."
 mpiexec -ppn 1 --cpu-bind numa $BCAST_BIN "{{ config.conda_env }}" "/tmp"
 {% endif %}
 
-{% if config.model_source %}
+{% set has_model_source = config.models | selectattr('model_source') | list | length > 0 %}
+{% if has_model_source %}
 # --- STAGE MODEL WEIGHTS ---
 TOOLS_DIR="${PBS_O_WORKDIR}/tools"
 BCAST_BIN="${PBS_O_WORKDIR}/bcast"
@@ -58,18 +59,16 @@ popd
 export MPIR_CVAR_CH4_OFI_ENABLE_MULTI_NIC_STRIPING=1
 export MPIR_CVAR_CH4_OFI_MAX_NICS=4
 
-echo "Staging weights from {{ config.model_source }} to {{ config.hf_home }}/hub..."
-mpiexec -ppn 1 --cpu-bind numa $BCAST_BIN "{{ config.model_source }}" "{{ config.hf_home }}/hub"
+{% for m in config.models %}
+{% if m.model_source %}
+echo "Staging weights from {{ m.model_source }} to {{ config.hf_home }}/hub..."
+mpiexec -ppn 1 --cpu-bind numa $BCAST_BIN "{{ m.model_source }}" "{{ config.hf_home }}/hub"
+{% endif %}
+{% endfor %}
 {% endif %}
 
-# --- LAUNCH INSTANCES ---
-aegis launch \
-    --model "{{ config.model }}" \
-    --instances {{ config.instances }} \
-    --tensor-parallel-size {{ config.tensor_parallel_size }} \
-    --port-start {{ config.port_start }} \
-    --hf-home "{{ config.hf_home }}" \
-{% if config.conda_env %}    --conda-env "{{ config.conda_env }}" \
-{% endif %}
-{% if config.extra_vllm_args %}    --extra-vllm-args {{ config.extra_vllm_args | join(' ') }} \
-{% endif %}
+# --- WRITE CONFIG AND LAUNCH INSTANCES ---
+cat > ${PBS_O_WORKDIR}/.aegis_config.yaml << 'AEGIS_CONFIG_EOF'
+{{ config_yaml }}AEGIS_CONFIG_EOF
+
+aegis launch --config ${PBS_O_WORKDIR}/.aegis_config.yaml
