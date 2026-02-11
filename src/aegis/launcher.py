@@ -222,16 +222,16 @@ def _register_instances(
 
     # Build a lookup from (node, port) -> ModelConfig so we can attach metadata
     model_lookup: dict[tuple[str, int], ModelConfig] = {}
+    node_port_counter: dict[str, int] = {}
     node_offset = 0
-    instance_idx = 0
     nodes = _get_allocated_nodes()
     for model_cfg in config.models:
         for _ in range(model_cfg.instances):
             npi = model_cfg.nodes_per_instance
             head_node = nodes[node_offset]
-            port = config.port_start + instance_idx
+            port = config.port_start + node_port_counter.get(head_node, 0)
+            node_port_counter[head_node] = node_port_counter.get(head_node, 0) + 1
             model_lookup[(head_node, port)] = model_cfg
-            instance_idx += 1
             node_offset += npi
 
     for node, port in endpoints:
@@ -293,15 +293,18 @@ def launch_instances(config: AegisConfig) -> None:
     processes = []
     endpoints = []
     tmp_files = []
+    node_port_counter: dict[str, int] = {}
     instance_idx = 0
     node_offset = 0
 
     for model_cfg in config.models:
         for j in range(model_cfg.instances):
-            port = config.port_start + instance_idx
             npi = model_cfg.nodes_per_instance
             instance_nodes = nodes[node_offset : node_offset + npi]
-            endpoints.append((instance_nodes[0], port))
+            head_node = instance_nodes[0]
+            port = config.port_start + node_port_counter.get(head_node, 0)
+            node_port_counter[head_node] = node_port_counter.get(head_node, 0) + 1
+            endpoints.append((head_node, port))
 
             # Render the per-instance script
             script_content = template.render(

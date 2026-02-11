@@ -19,7 +19,7 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--port-start", type=int, dest="port_start",
-        help="Base port (incremented per instance)",
+        help="Base port for each node (incremented for additional instances on the same node)",
     )
     parser.add_argument("--hf-home", type=str, dest="hf_home", help="Path to model weights")
     parser.add_argument("--hf-token", type=str, dest="hf_token", help="HuggingFace token")

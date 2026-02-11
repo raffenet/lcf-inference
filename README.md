@@ -76,7 +76,7 @@ extra_vllm_args:
 
 ### Multiple models
 
-Launch different models within a single job allocation. Each model can have its own instance count, tensor-parallel size, weight source, and vLLM arguments. Ports are assigned sequentially across all instances (e.g., model A gets 8000–8001, model B gets 8002).
+Launch different models within a single job allocation. Each model can have its own instance count, tensor-parallel size, weight source, and vLLM arguments. Ports are assigned per node starting from `port_start`, incrementing only for additional instances on the same node (e.g., two instances on node1 get 8000–8001, one instance on node2 gets 8000).
 
 ```yaml
 port_start: 8000
