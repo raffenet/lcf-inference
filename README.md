@@ -57,6 +57,8 @@ aegis submit \
 
 ## Example Config (YAML)
 
+### Single model
+
 ```yaml
 model: meta-llama/Llama-3.3-70B-Instruct
 instances: 2
@@ -70,6 +72,30 @@ filesystems: flare:home
 extra_vllm_args:
   - --max-model-len
   - "32768"
+```
+
+### Multiple models
+
+Launch different models within a single job allocation. Each model can have its own instance count, tensor-parallel size, weight source, and vLLM arguments. Ports are assigned sequentially across all instances (e.g., model A gets 8000–8001, model B gets 8002).
+
+```yaml
+port_start: 8000
+hf_home: /tmp/hf_home
+walltime: "01:00:00"
+account: MyProject
+filesystems: flare:home
+
+models:
+  - model: meta-llama/Llama-3.3-70B-Instruct
+    instances: 2
+    tensor_parallel_size: 6
+    model_source: /flare/datasets/model-weights/hub/models--meta-llama--Llama-3.3-70B-Instruct
+    extra_vllm_args:
+      - --max-model-len
+      - "32768"
+  - model: meta-llama/Llama-3.1-8B-Instruct
+    instances: 1
+    tensor_parallel_size: 1
 ```
 
 ## Architecture
