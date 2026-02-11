@@ -1,6 +1,7 @@
 """Core orchestration: stage weights, launch vLLM instances."""
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -149,8 +150,26 @@ def _wait_for_instances(
     sys.exit(1)
 
 
+def _check_redis_server() -> None:
+    """Verify that a redis-server binary is available."""
+    redis_stable = os.environ.get("REDIS_STABLE", "")
+    if redis_stable and os.path.isfile(f"{redis_stable}/src/redis-server"):
+        return
+    if shutil.which("redis-server"):
+        return
+    print(
+        "Error: redis-server not found.\n"
+        "Install Redis and ensure redis-server is on your PATH,\n"
+        "or set the REDIS_STABLE environment variable to a Redis build tree.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
 def _start_redis(port: int) -> str:
     """Start a Redis server on the head node and return its bind address."""
+    _check_redis_server()
+
     tools_dir = Path(__file__).resolve().parent.parent.parent / "tools"
     script = tools_dir / "start_redis.sh"
 
