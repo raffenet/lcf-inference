@@ -36,6 +36,10 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="Additional arguments passed to vllm serve",
     )
     parser.add_argument(
+        "--redis-port", type=int, dest="redis_port",
+        help="Port for the Redis service registry (default: 6379)",
+    )
+    parser.add_argument(
         "--conda-env", type=str, dest="conda_env",
         help="Path to a conda-pack tarball to distribute and activate on all nodes",
     )
