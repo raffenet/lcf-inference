@@ -38,7 +38,7 @@ def stage_conda_env(config: AegisConfig) -> None:
     if not config.conda_env:
         return
 
-    tools_dir = Path(os.environ.get("PBS_O_WORKDIR", ".")) / "tools"
+    tools_dir = Path(__file__).resolve().parent.parent.parent / "tools"
     bcast_bin = tools_dir / "bcast"
 
     if not bcast_bin.exists():
@@ -73,8 +73,7 @@ def stage_weights(config: AegisConfig) -> None:
         print("No model_source specified, skipping weight staging.", file=sys.stderr)
         return
 
-    # Find the tools directory relative to the working directory
-    tools_dir = Path(os.environ.get("PBS_O_WORKDIR", ".")) / "tools"
+    tools_dir = Path(__file__).resolve().parent.parent.parent / "tools"
     bcast_bin = tools_dir / "bcast"
 
     if not bcast_bin.exists():
