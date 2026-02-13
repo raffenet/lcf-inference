@@ -16,6 +16,18 @@ from .config import AegisConfig, GPUS_PER_NODE, ModelConfig
 from .registry import ServiceRegistry, ServiceInfo, ServiceStatus
 
 
+def _project_root() -> Path:
+    """Find the project root by searching upward for pyproject.toml."""
+    anchor = Path(__file__).resolve().parent
+    for directory in (anchor, *anchor.parents):
+        if (directory / "pyproject.toml").exists():
+            return directory
+    raise FileNotFoundError(
+        "Could not find project root (no pyproject.toml in any parent of "
+        f"{anchor})"
+    )
+
+
 def _get_template_env() -> Environment:
     return Environment(
         loader=PackageLoader("aegis", "templates"),
@@ -39,7 +51,7 @@ def stage_conda_env(config: AegisConfig) -> None:
     if not config.conda_env:
         return
 
-    tools_dir = Path(__file__).resolve().parent.parent.parent / "tools"
+    tools_dir = _project_root() / "tools"
     bcast_bin = tools_dir / "bcast"
 
     if not bcast_bin.exists():
@@ -74,7 +86,7 @@ def stage_weights(config: AegisConfig) -> None:
         print("No model_source specified, skipping weight staging.", file=sys.stderr)
         return
 
-    tools_dir = Path(__file__).resolve().parent.parent.parent / "tools"
+    tools_dir = _project_root() / "tools"
     bcast_bin = tools_dir / "bcast"
 
     if not bcast_bin.exists():
@@ -170,7 +182,7 @@ def _start_redis(port: int) -> str:
     """Start a Redis server on the head node and return its bind address."""
     _check_redis_server()
 
-    tools_dir = Path(__file__).resolve().parent.parent.parent / "tools"
+    tools_dir = _project_root() / "tools"
     script = tools_dir / "start_redis.sh"
 
     result = subprocess.run(
@@ -199,7 +211,7 @@ def _start_redis(port: int) -> str:
 
 def _stop_redis() -> None:
     """Stop the Redis server using the stop script."""
-    tools_dir = Path(__file__).resolve().parent.parent.parent / "tools"
+    tools_dir = _project_root() / "tools"
     script = tools_dir / "stop_redis.sh"
 
     result = subprocess.run([str(script)], capture_output=True, text=True)
