@@ -1,7 +1,6 @@
 """Core orchestration: stage weights, launch vLLM instances."""
 
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -13,7 +12,6 @@ from pathlib import Path
 from jinja2 import Environment, PackageLoader
 
 from .config import AegisConfig, GPUS_PER_NODE, ModelConfig
-from .registry import ServiceRegistry, ServiceInfo, ServiceStatus
 
 
 def _project_root() -> Path:
@@ -192,124 +190,6 @@ def _wait_for_instances(
     sys.exit(1)
 
 
-def _check_redis_server() -> None:
-    """Verify that a redis-server binary is available."""
-    redis_stable = os.environ.get("REDIS_STABLE", "")
-    if redis_stable and os.path.isfile(f"{redis_stable}/src/redis-server"):
-        return
-    if shutil.which("redis-server"):
-        return
-    print(
-        "Error: redis-server not found.\n"
-        "Install Redis and ensure redis-server is on your PATH,\n"
-        "or set the REDIS_STABLE environment variable to a Redis build tree.",
-        file=sys.stderr,
-    )
-    sys.exit(1)
-
-
-def _start_redis(port: int) -> str:
-    """Start a Redis server on the head node and return its bind address."""
-    _check_redis_server()
-
-    tools_dir = _project_root() / "tools"
-    script = tools_dir / "start_redis.sh"
-
-    result = subprocess.run(
-        [str(script), "", str(port)],
-        capture_output=True, text=True,
-    )
-    if result.returncode != 0:
-        print(f"Failed to start Redis:\n{result.stderr}", file=sys.stderr)
-        sys.exit(1)
-
-    # Parse bind address from script output (line: "...  Bind address: <addr>")
-    redis_host = None
-    for line in result.stdout.splitlines():
-        if "Bind address:" in line:
-            redis_host = line.split("Bind address:")[-1].strip()
-            break
-
-    if not redis_host:
-        print("Error: could not determine Redis bind address from start script output.",
-              file=sys.stderr)
-        sys.exit(1)
-
-    print(f"Redis started on {redis_host}:{port}", file=sys.stderr)
-    return redis_host
-
-
-def _stop_redis() -> None:
-    """Stop the Redis server using the stop script."""
-    tools_dir = _project_root() / "tools"
-    script = tools_dir / "stop_redis.sh"
-
-    result = subprocess.run([str(script)], capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"Warning: Redis shutdown returned non-zero: {result.stderr}",
-              file=sys.stderr)
-    else:
-        print("Redis stopped.", file=sys.stderr)
-
-
-def _register_instances(
-    endpoints: list[tuple[str, int]],
-    config: AegisConfig,
-    redis_host: str,
-    redis_port: int,
-    status: str = ServiceStatus.STARTING.value,
-) -> None:
-    """Register vLLM instances with the Redis service registry."""
-    registry = ServiceRegistry(redis_host=redis_host, redis_port=redis_port)
-
-    # Build a lookup from (node, port) -> ModelConfig so we can attach metadata
-    model_lookup: dict[tuple[str, int], ModelConfig] = {}
-    node_port_counter: dict[str, int] = {}
-    node_offset = 0
-    nodes = _get_allocated_nodes()
-    for model_cfg in config.models:
-        for _ in range(model_cfg.instances):
-            npi = model_cfg.nodes_per_instance
-            head_node = nodes[node_offset]
-            port = config.port_start + node_port_counter.get(head_node, 0)
-            node_port_counter[head_node] = node_port_counter.get(head_node, 0) + 1
-            model_lookup[(head_node, port)] = model_cfg
-            node_offset += npi
-
-    for node, port in endpoints:
-        model_cfg = model_lookup.get((node, port))
-        metadata = {}
-        if model_cfg:
-            metadata["model"] = model_cfg.model
-            metadata["tensor_parallel_size"] = model_cfg.tensor_parallel_size
-
-        service = ServiceInfo(
-            service_id=f"vllm-{node}-{port}",
-            host=node,
-            port=port,
-            service_type="vllm",
-            status=status,
-            metadata=metadata,
-        )
-        registry.register_service(service)
-        print(f"Registered {service.service_id} ({status}) with registry", file=sys.stderr)
-
-
-def _update_instances_status(
-    endpoints: list[tuple[str, int]],
-    redis_host: str,
-    redis_port: int,
-    status: ServiceStatus,
-) -> None:
-    """Update the status of previously registered instances."""
-    registry = ServiceRegistry(redis_host=redis_host, redis_port=redis_port)
-
-    for node, port in endpoints:
-        service_id = f"vllm-{node}-{port}"
-        registry.update_health(service_id, status)
-        print(f"Updated {service_id} -> {status.value}", file=sys.stderr)
-
-
 def launch_instances(config: AegisConfig) -> None:
     """Launch vLLM instances across allocated nodes."""
     nodes = _get_allocated_nodes()
@@ -321,9 +201,6 @@ def launch_instances(config: AegisConfig) -> None:
             file=sys.stderr,
         )
         sys.exit(1)
-
-    # Start Redis service registry on the head node
-    redis_host = _start_redis(config.redis_port)
 
     # Write temp files to the shared filesystem so remote nodes can access them.
     # PBS sets TMPDIR to a node-local path, so we use PBS_O_WORKDIR instead.
@@ -401,25 +278,12 @@ def launch_instances(config: AegisConfig) -> None:
     total_instances = instance_idx
     print(f"All {total_instances} instance(s) launched. Waiting for health checks...", file=sys.stderr)
 
-    # Register instances as "starting" while they initialize
-    _register_instances(endpoints, config, redis_host, config.redis_port,
-                        status=ServiceStatus.STARTING.value)
-
-    _wait_for_instances(endpoints)
-
-    for path in tmp_files:
-        os.unlink(path)
-
-    # Update instances to "healthy" now that health checks passed
-    _update_instances_status(endpoints, redis_host, config.redis_port,
-                             ServiceStatus.HEALTHY)
-
-    # Spawn a single heartbeat monitor on the head node that watches all
-    # instances.  This replaces the previous per-node SSH approach and avoids
-    # N SSH calls / N long-running remote processes.
+    # Spawn the heartbeat process which creates the in-memory registry,
+    # registers all instances as STARTING, and serves the HTTP query API.
+    head_node = nodes[0]
     heartbeat_args = [
         sys.executable, "-m", "aegis.heartbeat",
-        "--all", redis_host, str(config.redis_port),
+        "--registry-port", str(config.registry_port),
     ]
     for node, port in endpoints:
         heartbeat_args.append(f"vllm-{node}-{port}:{node}:{port}")
@@ -432,5 +296,13 @@ def launch_instances(config: AegisConfig) -> None:
     )
     print(f"Started heartbeat monitor for {len(endpoints)} instance(s)", file=sys.stderr)
 
+    _wait_for_instances(endpoints)
+
+    for path in tmp_files:
+        os.unlink(path)
+
+    # The heartbeat loop will naturally transition instances from STARTING to
+    # HEALTHY once their /health endpoints respond 200 — no separate update needed.
+
     print(f"All {total_instances} instance(s) are healthy.", file=sys.stderr)
-    print(f"Redis service registry: {redis_host}:{config.redis_port}", file=sys.stderr)
+    print(f"Service registry: http://{head_node}:{config.registry_port}", file=sys.stderr)

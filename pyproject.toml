@@ -12,7 +12,6 @@ license = "MIT"
 dependencies = [
     "pyyaml",
     "jinja2",
-    "redis",
     "huggingface_hub",
 ]
 

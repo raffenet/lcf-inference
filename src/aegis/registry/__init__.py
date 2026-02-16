@@ -1,21 +1,25 @@
 """
-Redis-based Service Registry
+In-process Service Registry
 
-This package provides tools for:
-1. Service registry & health tracking (using hashes + sets)
-2. Centralized job queue with lists/streams (coming soon)
-3. Result collection & async API (coming soon)
+This package provides:
+1. InMemoryRegistry — dict-backed registry for the heartbeat process
+2. ServiceRegistryClient — HTTP client for querying the registry
+3. start_registry_server — launches an HTTP query API in a daemon thread
 """
 
 from .service_registry import (
-    ServiceRegistry,
+    InMemoryRegistry,
+    ServiceRegistryClient,
     ServiceInfo,
-    ServiceStatus
+    ServiceStatus,
+    start_registry_server,
 )
 
 __version__ = '0.1.0'
 __all__ = [
-    'ServiceRegistry',
+    'InMemoryRegistry',
+    'ServiceRegistryClient',
     'ServiceInfo',
-    'ServiceStatus'
+    'ServiceStatus',
+    'start_registry_server',
 ]

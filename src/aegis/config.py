@@ -47,8 +47,8 @@ class AegisConfig:
     filesystems: str = "flare:home"
     conda_env: Optional[str] = None
 
-    # Redis service registry
-    redis_port: int = 6379
+    # In-process service registry (HTTP API port)
+    registry_port: int = 8471
 
     # Multi-model list
     models: list[ModelConfig] = field(default_factory=list)
