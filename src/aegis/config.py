@@ -18,6 +18,7 @@ class ModelConfig:
     instances: int = 1
     tensor_parallel_size: int = 1
     model_source: Optional[str] = None
+    download_weights: bool = False
     extra_vllm_args: list[str] = field(default_factory=list)
 
     @property
@@ -33,6 +34,7 @@ class AegisConfig:
     instances: int = 1
     tensor_parallel_size: int = 1
     model_source: Optional[str] = None
+    download_weights: bool = False
     extra_vllm_args: list[str] = field(default_factory=list)
 
     # Global settings
@@ -60,7 +62,7 @@ class AegisConfig:
 
 
 # Fields that live on ModelConfig (used for backward-compat conversion)
-_MODEL_FIELDS = {"model", "instances", "tensor_parallel_size", "model_source", "extra_vllm_args"}
+_MODEL_FIELDS = {"model", "instances", "tensor_parallel_size", "model_source", "download_weights", "extra_vllm_args"}
 
 
 def _normalize_models(config: AegisConfig) -> None:
@@ -79,6 +81,7 @@ def _normalize_models(config: AegisConfig) -> None:
                 instances=config.instances,
                 tensor_parallel_size=config.tensor_parallel_size,
                 model_source=config.model_source,
+                download_weights=config.download_weights,
                 extra_vllm_args=list(config.extra_vllm_args),
             )
         ]
@@ -144,6 +147,8 @@ def config_to_yaml(config: AegisConfig) -> str:
             entry["tensor_parallel_size"] = m.tensor_parallel_size
         if m.model_source:
             entry["model_source"] = m.model_source
+        if m.download_weights:
+            entry["download_weights"] = m.download_weights
         if m.extra_vllm_args:
             entry["extra_vllm_args"] = m.extra_vllm_args
         models_list.append(entry)

@@ -79,10 +79,36 @@ def stage_conda_env(config: AegisConfig) -> None:
     print("Conda env staging complete.", file=sys.stderr)
 
 
+def _download_hf_weights(config: AegisConfig) -> None:
+    """Download model weights from HuggingFace Hub for models that request it."""
+    models_to_download = [
+        m for m in config.models if m.download_weights and not m.model_source
+    ]
+    if not models_to_download:
+        return
+
+    try:
+        from huggingface_hub import snapshot_download
+    except ImportError:
+        print(
+            "Error: huggingface_hub is required for --download-weights.\n"
+            "Install it with: pip install huggingface_hub",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    for m in models_to_download:
+        print(f"Downloading weights from HuggingFace Hub: {m.model}", file=sys.stderr)
+        downloaded_path = snapshot_download(m.model, cache_dir=config.hf_home)
+        print(f"Downloaded {m.model} to {downloaded_path}", file=sys.stderr)
+        m.model_source = downloaded_path
+
+
 def stage_weights(config: AegisConfig) -> None:
     """Compile bcast (if needed) and broadcast model weights to local storage."""
-    sources = [m.model_source for m in config.models if m.model_source]
-    if not sources:
+    _download_hf_weights(config)
+
+    if not any(m.model_source for m in config.models):
         print("No model_source specified, skipping weight staging.", file=sys.stderr)
         return
 
@@ -101,12 +127,16 @@ def stage_weights(config: AegisConfig) -> None:
     env["MPIR_CVAR_CH4_OFI_ENABLE_MULTI_NIC_STRIPING"] = "1"
     env["MPIR_CVAR_CH4_OFI_MAX_NICS"] = "4"
 
-    for source in sources:
+    for m in config.models:
+        if not m.model_source:
+            continue
+        source = m.model_source
+        bcast_cmd = ["mpiexec", "-ppn", "1", "--cpu-bind", "numa", str(bcast_bin)]
+        if m.download_weights:
+            bcast_cmd.append("--no-root-write")
+        bcast_cmd.extend([source, dest])
         print(f"Staging weights: {source} -> {dest}", file=sys.stderr)
-        result = subprocess.run(
-            ["mpiexec", "-ppn", "1", "--cpu-bind", "numa", str(bcast_bin), source, dest],
-            env=env,
-        )
+        result = subprocess.run(bcast_cmd, env=env)
         if result.returncode != 0:
             print(f"Weight staging failed for {source}.", file=sys.stderr)
             sys.exit(1)

@@ -24,19 +24,34 @@ int main(int argc, char **argv) {
     char command[4096];
     int rank;
     unsigned long long total_bytes = 0;
+    int no_root_write = 0;
 
     clock_gettime(CLOCK_MONOTONIC, &start);
 
     MPI_Init(NULL, NULL);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if (argc < 2) {
-        if (rank == 0) fprintf(stderr, "Usage: bcast <src> [dest]\n");
+    /* Parse optional --no-root-write flag (can appear anywhere). */
+    int positional[2];
+    int npos = 0;
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--no-root-write") == 0) {
+            no_root_write = 1;
+        } else {
+            if (npos < 2) positional[npos] = i;
+            npos++;
+        }
+    }
+
+    if (npos < 1) {
+        if (rank == 0) fprintf(stderr, "Usage: bcast [--no-root-write] <src> [dest]\n");
         MPI_Finalize();
         return 1;
     }
 
-    destdir = (argc < 3) ? "/tmp" : argv[2];
+    /* Map positional args back to src / dest. */
+    argv[1] = argv[positional[0]];
+    destdir = (npos < 2) ? "/tmp" : argv[positional[1]];
 
     FILE *archive = NULL;
 
@@ -68,13 +83,18 @@ int main(int argc, char **argv) {
         printf("bcast: Broadcasting %s to %s ()...\n", argv[1], destdir);
     }
 
-    // --- ALL RANKS: OPEN WRITE STREAM ---
-    snprintf(command, sizeof(command), "mkdir -p %s", destdir);
-    system(command);
+    // --- OPEN WRITE STREAM (skip on rank 0 when --no-root-write) ---
+    int skip_write = (rank == 0 && no_root_write);
+    FILE *dest = NULL;
 
-    snprintf(command, sizeof(command), "tar -xf - -C %s", destdir);
-    FILE *dest = popen(command, "w");
-    CHECK_ERROR(!dest, "popen (write)");
+    if (!skip_write) {
+        snprintf(command, sizeof(command), "mkdir -p %s", destdir);
+        system(command);
+
+        snprintf(command, sizeof(command), "tar -xf - -C %s", destdir);
+        dest = popen(command, "w");
+        CHECK_ERROR(!dest, "popen (write)");
+    }
 
     // --- STREAMING LOOP ---
     void *buf = malloc(BUFFER_SIZE);
@@ -113,14 +133,16 @@ int main(int argc, char **argv) {
         MPI_Bcast(buf, chunk_size, MPI_BYTE, 0, MPI_COMM_WORLD);
 
         // 3. Write to local SSD (Handle partial writes if necessary, though uncommon on local disk)
-        size_t total_written = 0;
-        while (total_written < chunk_size) {
-            size_t n = fwrite((char*)buf + total_written, 1, chunk_size - total_written, dest);
-            if (n == 0) {
-                 fprintf(stderr, "Rank %d: Write error (Disk full?)\n", rank);
-                 MPI_Abort(MPI_COMM_WORLD, 1);
+        if (!skip_write) {
+            size_t total_written = 0;
+            while (total_written < chunk_size) {
+                size_t n = fwrite((char*)buf + total_written, 1, chunk_size - total_written, dest);
+                if (n == 0) {
+                     fprintf(stderr, "Rank %d: Write error (Disk full?)\n", rank);
+                     MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+                total_written += n;
             }
-            total_written += n;
         }
 
         total_bytes += chunk_size;
@@ -129,7 +151,9 @@ int main(int argc, char **argv) {
     if (rank == 0) {
         pclose(archive);
     }
-    pclose(dest);
+    if (dest) {
+        pclose(dest);
+    }
     free(buf);
 
     // --- TIMING ---

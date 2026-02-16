@@ -32,6 +32,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--account", type=str, help="PBS account/project")
     parser.add_argument("--filesystems", type=str, help="PBS filesystem directive")
     parser.add_argument(
+        "--download-weights", action="store_true", dest="download_weights",
+        default=None,
+        help="Download model weights from HuggingFace Hub before staging",
+    )
+    parser.add_argument(
         "--extra-vllm-args", nargs="*", dest="extra_vllm_args",
         help="Additional arguments passed to vllm serve",
     )
