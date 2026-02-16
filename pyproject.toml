@@ -13,6 +13,7 @@ dependencies = [
     "pyyaml",
     "jinja2",
     "redis",
+    "huggingface_hub",
 ]
 
 [project.scripts]
