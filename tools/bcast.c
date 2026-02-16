@@ -49,19 +49,20 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    /* Map positional args back to src / dest. */
-    argv[1] = argv[positional[0]];
-    destdir = (npos < 2) ? "/tmp" : argv[positional[1]];
+    /* Copy positional args into local strings so we no longer depend on argv. */
+    char *srcpath = strdup(argv[positional[0]]);
+    char *destpath = (npos < 2) ? strdup("/tmp") : strdup(argv[positional[1]]);
+    destdir = destpath;
 
     FILE *archive = NULL;
 
     // --- RANK 0: OPEN READ STREAM ---
     if (rank == 0) {
         // Strip trailing slash to safely handle directories
-        int last_idx = strlen(argv[1]) - 1;
-        if (argv[1][last_idx] == '/') argv[1][last_idx] = '\0';
+        int last_idx = strlen(srcpath) - 1;
+        if (srcpath[last_idx] == '/') srcpath[last_idx] = '\0';
 
-        char *dup = strdup(argv[1]);
+        char *dup = strdup(srcpath);
         char *slash = strrchr(dup, '/');
         char *left, *right;
 
@@ -80,7 +81,7 @@ int main(int argc, char **argv) {
         CHECK_ERROR(!archive, "popen (read)");
         free(dup);
 
-        printf("bcast: Broadcasting %s to %s ()...\n", argv[1], destdir);
+        printf("bcast: Broadcasting %s to %s ()...\n", srcpath, destdir);
     }
 
     // --- OPEN WRITE STREAM (skip on rank 0 when --no-root-write) ---
@@ -155,6 +156,8 @@ int main(int argc, char **argv) {
         pclose(dest);
     }
     free(buf);
+    free(srcpath);
+    free(destpath);
 
     // --- TIMING ---
     clock_gettime(CLOCK_MONOTONIC, &end);
