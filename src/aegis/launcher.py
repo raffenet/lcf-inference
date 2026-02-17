@@ -207,6 +207,10 @@ def launch_instances(config: AegisConfig) -> None:
         )
         sys.exit(1)
 
+    # Create a log directory on the launch node under $TMPDIR.
+    log_dir = Path(os.environ.get("TMPDIR", "/tmp")) / "aegis-logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+
     # Write temp files to the shared filesystem so remote nodes can access them.
     # PBS sets TMPDIR to a node-local path, so we use PBS_O_WORKDIR instead.
     shared_tmpdir = os.environ.get("PBS_O_WORKDIR", None)
@@ -271,7 +275,7 @@ def launch_instances(config: AegisConfig) -> None:
                     "mpiexec",
                     "-ppn", "1",
                     "--hostfile", hostfile.name,
-                    "-o", f"{instance_idx}/%h/out.%R",
+                    "-o", f"{log_dir}/{instance_idx}/%h/out.%R",
                     script_file.name,
                 ],
                 env=os.environ,
@@ -293,13 +297,15 @@ def launch_instances(config: AegisConfig) -> None:
     for node, port in endpoints:
         heartbeat_args.append(f"vllm-{node}-{port}:{node}:{port}")
 
+    heartbeat_log = open(log_dir / "heartbeat.log", "w")
     subprocess.Popen(
         heartbeat_args,
         stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=heartbeat_log,
+        stderr=heartbeat_log,
     )
     print(f"Started heartbeat monitor for {len(endpoints)} instance(s)", file=sys.stderr)
+    print(f"Logs: {log_dir}", file=sys.stderr)
 
     _wait_for_instances(endpoints)
 
