@@ -40,6 +40,7 @@ vllm serve {{ model }} \
     --tensor-parallel-size {{ tensor_parallel_size }} \
     --port {{ port }} \
     --enforce-eager \
+    --distributed-executor-backend mp \
 {% for arg in extra_vllm_args %}    {{ arg }} \
 {% endfor %}
 
