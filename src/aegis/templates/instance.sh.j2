@@ -18,7 +18,9 @@ export OMP_NUM_THREADS=52
 unset ONEAPI_DEVICE_SELECTOR
 export CCL_PROCESS_LAUNCHER=None
 export TOKENIZERS_PARALLELISM=false
+export VLLM_LOGGING_LEVEL=DEBUG
 export OCL_ICD_SO="/opt/aurora/25.190.0/oneapi/2025.2/lib/libintelocl.so"
+export OCL_ICD_FILENAMES="/opt/aurora/25.190.0/oneapi/2025.2/lib/libintelocl.so"
 export VLLM_DISABLE_SINKS=1
 {% else %}
 module load frameworks
