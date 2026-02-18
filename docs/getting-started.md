@@ -80,6 +80,34 @@ aegis registry list
 aegis registry list-healthy
 ```
 
+## Staging a Conda Environment
+
+If your compute nodes don't have vLLM pre-installed, you can distribute a custom conda environment to all nodes using [conda-pack](https://conda.github.io/conda-pack/). First, create a tarball from an existing conda environment:
+
+```bash
+conda pack -n my_vllm_env -o my_vllm_env.tar.gz
+```
+
+Then reference it in your config file:
+
+```yaml
+model: meta-llama/Llama-3.3-70B-Instruct
+instances: 2
+tensor_parallel_size: 6
+conda_env: /path/to/my_vllm_env.tar.gz
+walltime: "01:00:00"
+account: MyProject
+filesystems: flare:home
+```
+
+Or pass it as a CLI flag:
+
+```bash
+aegis submit --config config.yaml --conda-env /path/to/my_vllm_env.tar.gz
+```
+
+Aegis will broadcast the tarball to all compute nodes and activate the environment before launching vLLM instances.
+
 ## Overriding Config via CLI
 
 All config values can be overridden with CLI flags. CLI flags take precedence over the config file:

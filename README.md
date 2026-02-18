@@ -98,6 +98,35 @@ models:
     tensor_parallel_size: 1
 ```
 
+### Staging a conda environment
+
+To distribute a custom conda environment (e.g., one containing vLLM) to all compute nodes, create a [conda-pack](https://conda.github.io/conda-pack/) tarball and pass it via `--conda-env`:
+
+```bash
+# Create the tarball from an existing conda environment
+conda pack -n my_vllm_env -o my_vllm_env.tar.gz
+```
+
+Then reference it in your config file:
+
+```yaml
+model: meta-llama/Llama-3.3-70B-Instruct
+instances: 2
+tensor_parallel_size: 6
+conda_env: /path/to/my_vllm_env.tar.gz
+walltime: "01:00:00"
+account: MyProject
+filesystems: flare:home
+```
+
+Or pass it as a CLI flag:
+
+```bash
+aegis submit --config config.yaml --conda-env /path/to/my_vllm_env.tar.gz
+```
+
+Aegis will broadcast the tarball to all nodes and activate the environment before launching vLLM instances.
+
 ## Architecture
 
 ```
