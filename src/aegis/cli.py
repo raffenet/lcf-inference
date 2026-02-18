@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import sys
 
 from .config import AegisConfig, load_config, merge_cli_args, _normalize_models
@@ -71,6 +72,39 @@ def _build_config(args) -> AegisConfig:
     return config
 
 
+def _resolve_hf_token(config: AegisConfig) -> str | None:
+    """Return the HF token from config or environment."""
+    return config.hf_token or os.environ.get("HF_TOKEN")
+
+
+def _check_gated_models(config: AegisConfig) -> None:
+    """Check whether any models require authentication and error early if
+    an HF token is needed but not available."""
+    token = _resolve_hf_token(config)
+    if token:
+        return  # token is available, nothing to check
+
+    try:
+        from huggingface_hub import model_info
+    except ImportError:
+        return  # can't check without the library; let it fail later
+
+    for m in config.models:
+        try:
+            info = model_info(m.model)
+            if getattr(info, "gated", False):
+                print(
+                    f"Error: Model '{m.model}' is gated and requires authentication.\n"
+                    "Set HF_TOKEN in your environment or pass --hf-token.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+        except Exception:
+            # Network error or model not found — skip the check and let
+            # vllm surface the real error at serve time.
+            pass
+
+
 def cmd_submit(args) -> None:
     """Generate and submit a PBS batch job."""
     config = _build_config(args)
@@ -81,6 +115,8 @@ def cmd_submit(args) -> None:
     if not config.account:
         print("Error: --account is required.", file=sys.stderr)
         sys.exit(1)
+
+    _check_gated_models(config)
 
     script = generate_pbs_script(config)
 
@@ -98,6 +134,8 @@ def cmd_launch(args) -> None:
     if not config.models:
         print("Error: --model is required (or provide a 'models' list in the config file).", file=sys.stderr)
         sys.exit(1)
+
+    _check_gated_models(config)
 
     if not args.skip_staging:
         stage_conda_env(config)
