@@ -54,6 +54,10 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         "--startup-timeout", type=int, dest="startup_timeout",
         help="Seconds to wait for instances to become healthy (default: 600)",
     )
+    parser.add_argument(
+        "--endpoints-file", type=str, dest="endpoints_file",
+        help="Output path for the endpoints file (default: aegis_endpoints.txt)",
+    )
 
 
 def _build_config(args) -> AegisConfig:

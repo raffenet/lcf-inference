@@ -37,6 +37,7 @@ aegis submit --config config.yaml
 | `--registry-port` | `int` | Port for the service registry HTTP API (default: 8471) |
 | `--conda-env` | `str` | Path to a conda-pack tarball to distribute and activate on all nodes |
 | `--startup-timeout` | `int` | Seconds to wait for instances to become healthy (default: 600) |
+| `--endpoints-file` | `str` | Output path for the endpoints file (default: `aegis_endpoints.txt`) |
 
 ## `aegis launch`
 

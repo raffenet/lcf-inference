@@ -53,6 +53,9 @@ class AegisConfig:
     # Startup timeout (seconds) for instances to become healthy
     startup_timeout: int = 600
 
+    # Output path for the endpoints file
+    endpoints_file: str = "aegis_endpoints.txt"
+
     # Multi-model list
     models: list[ModelConfig] = field(default_factory=list)
 

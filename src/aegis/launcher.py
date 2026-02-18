@@ -325,7 +325,7 @@ def launch_instances(config: AegisConfig) -> None:
     # HEALTHY once their /health endpoints respond 200 — no separate update needed.
 
     # Write an endpoints file with only the healthy instances.
-    endpoints_file = Path("aegis_endpoints.txt")
+    endpoints_file = Path(config.endpoints_file)
     with open(endpoints_file, "w") as f:
         for node, port in healthy:
             f.write(f"{node}:{port}\n")
