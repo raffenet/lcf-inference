@@ -18,5 +18,11 @@ dependencies = [
 [project.scripts]
 aegis = "aegis.cli:main"
 
+[project.optional-dependencies]
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]

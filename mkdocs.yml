@@ -1,0 +1,44 @@
+site_name: Aegis
+site_description: HPC LLM Instance Launcher
+repo_url: https://github.com/argonne-lcf/lcf-inference
+repo_name: argonne-lcf/lcf-inference
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - tables
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - CLI Reference: cli.md
+  - Configuration: configuration.md
+  - Platforms:
+    - Aurora: platforms/aurora.md
+    - Frontier: platforms/frontier.md
+  - Tested Models: models.md
+  - Roadmap: roadmap.md
