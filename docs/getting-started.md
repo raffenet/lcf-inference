@@ -26,6 +26,18 @@ Verify the installation:
 aegis --help
 ```
 
+### Installing in a conda environment
+
+Create a standalone conda environment for Aegis:
+
+```bash
+conda create -n aegis python=3.11 -y
+conda activate aegis
+pip install .
+```
+
+Aegis is a launcher — it does not require vLLM itself. vLLM only needs to be available on the compute nodes, either via a system module (e.g., `module load frameworks` on Aurora) or a separate conda environment distributed with `--conda-env`. See [Staging a Conda Environment](#staging-a-conda-environment) below.
+
 ## First Launch
 
 ### 1. Create a config file
