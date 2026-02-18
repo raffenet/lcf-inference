@@ -10,6 +10,9 @@
 #PBS -o aegis_output.log
 #PBS -e aegis_error.log
 
+{% if config.aegis_env %}
+source {{ config.aegis_env }}/bin/activate
+{% endif %}
 {% if not config.conda_env %}
 module load frameworks
 {% endif %}
@@ -70,4 +73,4 @@ mpiexec -ppn 1 --cpu-bind numa $BCAST_BIN "{{ m.model_source }}" "{{ config.hf_h
 cat > ${PBS_O_WORKDIR}/.aegis_config.yaml << 'AEGIS_CONFIG_EOF'
 {{ config_yaml }}AEGIS_CONFIG_EOF
 
-aegis launch --config ${PBS_O_WORKDIR}/.aegis_config.yaml
+{% if config.aegis_env %}{{ config.aegis_env }}/bin/aegis{% else %}aegis{% endif %} launch --config ${PBS_O_WORKDIR}/.aegis_config.yaml

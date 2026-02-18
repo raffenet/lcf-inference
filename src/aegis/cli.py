@@ -227,6 +227,10 @@ def main(argv: list[str] | None = None) -> None:
         "--dry-run", action="store_true", dest="dry_run",
         help="Print the generated PBS script without submitting",
     )
+    submit_parser.add_argument(
+        "--aegis-env", type=str, dest="aegis_env",
+        help="Path to a conda environment containing the aegis package",
+    )
     submit_parser.set_defaults(func=cmd_submit)
 
     # launch

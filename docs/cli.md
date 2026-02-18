@@ -12,9 +12,10 @@ aegis submit --config config.yaml
 
 ### Submit-specific flags
 
-| Flag | Description |
-|------|-------------|
-| `--dry-run` | Print the generated PBS script without submitting |
+| Flag | Type | Description |
+|------|------|-------------|
+| `--dry-run` | flag | Print the generated PBS script without submitting |
+| `--aegis-env` | `str` | Path to a conda environment containing the aegis package |
 
 ### Common flags (shared with `launch`)
 

@@ -53,6 +53,9 @@ class AegisConfig:
     # Startup timeout (seconds) for instances to become healthy
     startup_timeout: int = 600
 
+    # Path to a conda environment containing the aegis package (for submit)
+    aegis_env: Optional[str] = None
+
     # Output path for the endpoints file
     endpoints_file: str = "aegis_endpoints.txt"
 
