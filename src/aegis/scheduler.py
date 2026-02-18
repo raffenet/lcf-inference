@@ -74,13 +74,17 @@ class SSHConnection:
         print("SSH connection established.", file=sys.stderr)
 
     def run(self, command: str) -> subprocess.CompletedProcess:
-        """Run a command on the remote host over the existing connection."""
+        """Run a command on the remote host over the existing connection.
+
+        The command is wrapped in a login shell so that the user's profile
+        (module loads, PATH additions, etc.) is sourced.
+        """
         return subprocess.run(
             [
                 "ssh",
                 "-S", self.socket_path,
                 self.remote,
-                command,
+                "bash", "-l", "-c", command,
             ],
             capture_output=True,
             text=True,
