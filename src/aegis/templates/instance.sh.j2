@@ -44,7 +44,7 @@ if [ -z "${HF_TOKEN:-}" ]; then
 fi
 export HF_HOME="{{ hf_home }}"
 
-vllm serve {{ model }} \
+numactl --cpunodebind=0 --membind=0 vllm serve {{ model }} \
     --dtype bfloat16 \
     --tensor-parallel-size {{ tensor_parallel_size }} \
     --port {{ port }} \
