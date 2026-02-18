@@ -102,6 +102,22 @@ class SSHConnection:
             print(f"scp failed:\n{result.stderr}", file=sys.stderr)
             sys.exit(1)
 
+    def scp_from(self, remote_path: str, local_path: str) -> None:
+        """Copy a file from the remote host to the local machine."""
+        result = subprocess.run(
+            [
+                "scp",
+                "-o", f"ControlPath={self.socket_path}",
+                f"{self.remote}:{remote_path}",
+                local_path,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            print(f"scp failed:\n{result.stderr}", file=sys.stderr)
+            sys.exit(1)
+
     def close(self) -> None:
         """Tear down the ControlMaster session."""
         subprocess.run(
@@ -176,7 +192,9 @@ def wait_for_endpoints(
 ) -> list[str]:
     """Poll until the endpoints file appears or the job dies.
 
-    Returns the list of endpoint strings on success.
+    Returns the list of endpoint strings on success.  When *ssh* is provided
+    the remote file is also copied to a local file with the same basename in
+    the current working directory.
     Exits with code 1 if the job terminates before endpoints are written.
     """
     print(
@@ -188,6 +206,15 @@ def wait_for_endpoints(
         # Check if endpoints file is ready
         endpoints = _read_endpoints_file(endpoints_file, ssh)
         if endpoints:
+            # Copy the remote file locally so users have it on disk
+            if ssh:
+                local_path = Path(endpoints_file).name
+                ssh.scp_from(endpoints_file, local_path)
+                print(
+                    f"Endpoints file copied to ./{local_path}",
+                    file=sys.stderr,
+                )
+
             print("Endpoints:", file=sys.stderr)
             for ep in endpoints:
                 print(ep)

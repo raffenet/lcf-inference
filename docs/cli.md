@@ -39,7 +39,7 @@ aegis submit --config config.yaml --remote user@aurora.alcf.anl.gov
 
 ALCF login nodes require a one-time password (OTP). Aegis opens an SSH `ControlMaster` session that prompts once for the OTP and reuses the connection for all subsequent operations (file copy, `qsub`, polling). The control socket is cleaned up on exit.
 
-Combine with `--wait` to submit remotely and block until endpoints are ready:
+Combine with `--wait` to submit remotely and block until endpoints are ready. The endpoints file is automatically copied to the current working directory:
 
 ```bash
 aegis submit --config config.yaml --remote user@aurora.alcf.anl.gov --wait
