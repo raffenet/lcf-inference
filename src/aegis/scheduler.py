@@ -1,5 +1,6 @@
 """PBS job generation and submission."""
 
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -84,7 +85,7 @@ class SSHConnection:
                 "ssh",
                 "-S", self.socket_path,
                 self.remote,
-                "bash", "-l", "-c", command,
+                f"bash -l -c {shlex.quote(command)}",
             ],
             capture_output=True,
             text=True,
@@ -162,14 +163,35 @@ def submit_job_remote(script: str, ssh: SSHConnection) -> str:
     return job_id
 
 
-def _check_job_running(job_id: str, ssh: SSHConnection | None = None) -> bool:
-    """Return True if qstat reports the job exists (queued or running)."""
-    cmd = f"qstat {job_id}"
+def _get_job_state(job_id: str, ssh: SSHConnection | None = None) -> str | None:
+    """Return the PBS job state character (Q, R, E, H, etc.) or None if the
+    job is no longer tracked by the scheduler."""
+    cmd = f"qstat -f {job_id}"
     if ssh:
         result = ssh.run(cmd)
     else:
         result = subprocess.run(cmd.split(), capture_output=True, text=True)
-    return result.returncode == 0
+    if result.returncode != 0:
+        return None
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if line.startswith("job_state"):
+            # Format: "job_state = R"
+            parts = line.split("=", 1)
+            if len(parts) == 2:
+                return parts[1].strip()
+    return None
+
+
+_JOB_STATE_LABELS = {
+    "Q": "queued",
+    "R": "running",
+    "H": "held",
+    "E": "exiting",
+    "T": "moving",
+    "W": "waiting",
+    "S": "suspended",
+}
 
 
 def _read_endpoints_file(
@@ -225,13 +247,15 @@ def wait_for_endpoints(
             return endpoints
 
         # Check if job is still alive
-        if not _check_job_running(job_id, ssh):
+        state = _get_job_state(job_id, ssh)
+        if state is None:
             print(
-                f"Error: Job {job_id} is no longer running and endpoints file "
-                f"was not found.",
+                f"Error: Job {job_id} is no longer tracked by the scheduler "
+                f"and endpoints file was not found.",
                 file=sys.stderr,
             )
             sys.exit(1)
 
-        print(f"  Job {job_id} is running, waiting ...", file=sys.stderr)
+        label = _JOB_STATE_LABELS.get(state, state)
+        print(f"  Job {job_id} is {label}, waiting ...", file=sys.stderr)
         time.sleep(poll_interval)

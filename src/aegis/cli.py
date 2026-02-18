@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 
 from .config import AegisConfig, load_config, merge_cli_args, _normalize_models
 from .launcher import launch_instances, stage_conda_env, stage_weights
@@ -136,6 +137,13 @@ def cmd_submit(args) -> None:
         ssh.connect()
 
     try:
+        # Remove stale endpoints file so --wait doesn't find it immediately
+        if args.wait:
+            if ssh:
+                ssh.run(f"rm -f {config.endpoints_file}")
+            else:
+                Path(config.endpoints_file).unlink(missing_ok=True)
+
         if ssh:
             job_id = submit_job_remote(script, ssh)
         else:
