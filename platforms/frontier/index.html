@@ -457,24 +457,6 @@
         
       
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Frontier
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -491,97 +473,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#environment-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Environment Setup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#model-weights" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Model Weights
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#serving-models" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Serving Models
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Serving Models">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#small-models-single-gpu" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Small Models (Single GPU)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#medium-models-multiple-gpus-single-node" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Medium Models (Multiple GPUs, Single Node)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#large-models-multiple-nodes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Large Models (Multiple Nodes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
       
     </li>
   
@@ -669,86 +560,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#environment-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Environment Setup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#model-weights" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Model Weights
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#serving-models" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Serving Models
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Serving Models">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#small-models-single-gpu" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Small Models (Single GPU)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#medium-models-multiple-gpus-single-node" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Medium Models (Multiple GPUs, Single Node)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#large-models-multiple-nodes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Large Models (Multiple Nodes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -771,48 +582,9 @@
 <p>Frontier is an AMD Instinct MI250X system at the Oak Ridge Leadership Computing Facility, managed with Slurm.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Frontier support in Aegis is planned but not yet implemented. The instructions below cover manual vLLM setup on Frontier nodes.</p>
+<p>Slurm support in Aegis is planned but not yet implemented.</p>
 </div>
-<h2 id="environment-setup">Environment Setup</h2>
-<p>Until native vLLM support is confirmed on Frontier, use the ROCm vLLM Docker images via Apptainer:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>apptainer<span class="w"> </span>build<span class="w"> </span>vllm-openai-rocm.sif<span class="w"> </span>docker://vllm/vllm-openai-rocm
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>apptainer<span class="w"> </span>shell<span class="w"> </span>vllm-openai-rocm.sif
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>vllm<span class="w"> </span>--version
-</code></pre></div>
-<h2 id="model-weights">Model Weights</h2>
-<p>Set HTTP proxy settings for outbound access when downloading models from Hugging Face:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">all_proxy</span><span class="o">=</span>socks://proxy.ccs.ornl.gov:3128/
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ftp_proxy</span><span class="o">=</span>ftp://proxy.ccs.ornl.gov:3128/
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">http_proxy</span><span class="o">=</span>http://proxy.ccs.ornl.gov:3128/
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">https_proxy</span><span class="o">=</span>http://proxy.ccs.ornl.gov:3128/
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">no_proxy</span><span class="o">=</span><span class="s1">&#39;localhost,127.0.0.0/8,*.ccs.ornl.gov&#39;</span>
-</code></pre></div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Some models hosted on Hugging Face are gated and require a <a href="https://huggingface.co/docs/hub/en/security-tokens">Hugging Face authentication token</a>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">HF_TOKEN</span><span class="o">=</span>&lt;your_token&gt;
-</code></pre></div>
-</div>
-<p>We recommend using Frontier's Burst Buffer storage for staging model weights.</p>
-<h2 id="serving-models">Serving Models</h2>
-<h3 id="small-models-single-gpu">Small Models (Single GPU)</h3>
-<p>Models with fewer than 7 billion parameters typically fit within a single GPU's 64 GB memory:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>vllm<span class="w"> </span>serve<span class="w"> </span>meta-llama/Llama-2-7b-chat-hf
-</code></pre></div>
-<h3 id="medium-models-multiple-gpus-single-node">Medium Models (Multiple GPUs, Single Node)</h3>
-<p>For tensor parallelism across multiple GPUs (<code>TP&gt;1</code>), first configure a Ray cluster:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">VLLM_HOST_IP</span><span class="o">=</span><span class="k">$(</span>hostname<span class="w"> </span>-I<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">unset</span><span class="w"> </span>ROCM_VISIBLE_DEVICES<span class="w">  </span><span class="c1"># vLLM throws an error if it sees this envvar</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>ray<span class="w"> </span>start<span class="w"> </span>--head<span class="w"> </span>--node-ip-address<span class="o">=</span><span class="nv">$VLLM_HOST_IP</span><span class="w"> </span>--num-cpus<span class="o">=</span><span class="m">128</span><span class="w"> </span>--num-gpus<span class="o">=</span><span class="m">8</span><span class="w"> </span><span class="p">&amp;</span>
-</code></pre></div>
-<p>Then serve the model:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>vllm<span class="w"> </span>serve<span class="w"> </span>meta-llama/Llama-3.3-70B-Instruct<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span>--tensor-parallel-size<span class="w"> </span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span>--trust-remote-code<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span>--max-model-len<span class="w"> </span><span class="m">32768</span>
-</code></pre></div>
-<h3 id="large-models-multiple-nodes">Large Models (Multiple Nodes)</h3>
-<p>Multi-node serving on Frontier is not yet documented. This will be updated as Aegis adds Slurm/Frontier support.</p>
+<p>When Frontier support is added, Aegis will generate and submit Slurm batch scripts (via <code>sbatch</code>) in the same way it currently handles PBS jobs on Aurora. Configuration, weight staging, and instance orchestration will work through the same <code>aegis submit</code> interface.</p>
 
 
 

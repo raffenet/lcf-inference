@@ -480,10 +480,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#environment-setup" class="md-nav__link">
+  <a href="#example-config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment Setup
+        Example Config
       
     </span>
   </a>
@@ -491,10 +491,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#model-weights" class="md-nav__link">
+  <a href="#submitting-jobs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Model Weights
+        Submitting Jobs
       
     </span>
   </a>
@@ -502,60 +502,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#serving-models" class="md-nav__link">
+  <a href="#vllm-availability" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Serving Models
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Serving Models">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#small-models-single-gpu-tile" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Small Models (Single GPU Tile)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#medium-models-multiple-gpu-tiles" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Medium Models (Multiple GPU Tiles)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#large-models-multiple-nodes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Large Models (Multiple Nodes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#using-aegis-on-aurora" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using Aegis on Aurora
+        vLLM Availability
       
     </span>
   </a>
@@ -687,10 +637,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#environment-setup" class="md-nav__link">
+  <a href="#example-config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment Setup
+        Example Config
       
     </span>
   </a>
@@ -698,10 +648,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#model-weights" class="md-nav__link">
+  <a href="#submitting-jobs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Model Weights
+        Submitting Jobs
       
     </span>
   </a>
@@ -709,60 +659,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#serving-models" class="md-nav__link">
+  <a href="#vllm-availability" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Serving Models
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Serving Models">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#small-models-single-gpu-tile" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Small Models (Single GPU Tile)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#medium-models-multiple-gpu-tiles" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Medium Models (Multiple GPU Tiles)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#large-models-multiple-nodes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Large Models (Multiple Nodes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#using-aegis-on-aurora" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using Aegis on Aurora
+        vLLM Availability
       
     </span>
   </a>
@@ -791,56 +691,32 @@
 
 <h1 id="aurora">Aurora</h1>
 <p>Aurora is an Intel Data Center GPU Max (Ponte Vecchio) system at the Argonne Leadership Computing Facility, managed with PBS.</p>
-<h2 id="environment-setup">Environment Setup</h2>
-<p>Load the frameworks module which includes an XPU-enabled vLLM installation:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>module<span class="w"> </span>load<span class="w"> </span>frameworks
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">NUMEXPR_MAX_THREADS</span><span class="o">=</span><span class="m">208</span><span class="w">  </span><span class="c1"># number of CPU threads on Aurora node</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CCL_PROCESS_LAUNCHER</span><span class="o">=</span>torchrun
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>vllm<span class="w"> </span>--version
+<h2 id="example-config">Example Config</h2>
+<p>Serve Llama 3.3 70B on Aurora with tensor parallelism across 8 GPU tiles:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">meta-llama/Llama-3.3-70B-Instruct</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">instances</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">tensor_parallel_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">model_source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/flare/datasets/model-weights/hub/models--meta-llama--Llama-3.3-70B-Instruct</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nt">walltime</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;01:00:00&quot;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nt">account</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MyProject</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nt">filesystems</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">flare:home</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nt">extra_vllm_args</span><span class="p">:</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">--max-model-len</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;32768&quot;</span>
 </code></pre></div>
-<h2 id="model-weights">Model Weights</h2>
-<p>Model weights for commonly used open-weight models are available in <code>/flare/datasets/model-weights/hub</code> on Aurora. However, accessing these weights from more than a single GPU can be very slow. For multi-GPU scenarios, read the weights once from the parallel filesystem and distribute them to node-local storage with MPI broadcast:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">HF_HOME</span><span class="o">=</span><span class="s2">&quot;/tmp/hf_home&quot;</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>mpiexec<span class="w"> </span>-ppn<span class="w"> </span><span class="m">1</span><span class="w"> </span>./bcast<span class="w"> </span>/flare/datasets/model-weights/hub/models--meta-llama--Llama-3.3-70B-Instruct<span class="w"> </span>/tmp/hf_home/hub
+<h2 id="submitting-jobs">Submitting Jobs</h2>
+<p>Submit from an Aurora login node:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>aegis<span class="w"> </span>submit<span class="w"> </span>--config<span class="w"> </span>config.yaml
 </code></pre></div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Some models hosted on Hugging Face are gated and require a <a href="https://huggingface.co/docs/hub/en/security-tokens">Hugging Face authentication token</a>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">HF_TOKEN</span><span class="o">=</span><span class="s2">&quot;YOUR_HF_TOKEN&quot;</span>
+<p>Submit from your laptop via SSH:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>aegis<span class="w"> </span>submit<span class="w"> </span>--config<span class="w"> </span>config.yaml<span class="w"> </span>--remote<span class="w"> </span>user@aurora.alcf.anl.gov
 </code></pre></div>
-</div>
-<h2 id="serving-models">Serving Models</h2>
-<h3 id="small-models-single-gpu-tile">Small Models (Single GPU Tile)</h3>
-<p>Models with fewer than 7 billion parameters typically fit within a single tile's 64 GB memory. No additional configuration is required:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>module<span class="w"> </span>load<span class="w"> </span>frameworks
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">NUMEXPR_MAX_THREADS</span><span class="o">=</span><span class="m">208</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CCL_PROCESS_LAUNCHER</span><span class="o">=</span>torchrun
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">HF_HOME</span><span class="o">=</span>/flare/datasets/model-weights
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">HF_TOKEN</span><span class="o">=</span>&lt;your_token&gt;
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>vllm<span class="w"> </span>serve<span class="w"> </span>meta-llama/Llama-2-7b-chat-hf
+<p>Submit and wait for endpoints to be ready:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>aegis<span class="w"> </span>submit<span class="w"> </span>--config<span class="w"> </span>config.yaml<span class="w"> </span>--wait
 </code></pre></div>
-<h3 id="medium-models-multiple-gpu-tiles">Medium Models (Multiple GPU Tiles)</h3>
-<p>For models up to ~70B parameters, use tensor parallelism across tiles on a single node:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>module<span class="w"> </span>load<span class="w"> </span>frameworks
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">NUMEXPR_MAX_THREADS</span><span class="o">=</span><span class="m">208</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CCL_PROCESS_LAUNCHER</span><span class="o">=</span>torchrun
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">HF_HOME</span><span class="o">=</span>/tmp/hf_home
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">HF_TOKEN</span><span class="o">=</span>&lt;your_token&gt;
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1"># Stage weights to local storage</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>mpiexec<span class="w"> </span>-ppn<span class="w"> </span><span class="m">1</span><span class="w"> </span>./bcast<span class="w"> </span>/flare/datasets/model-weights/hub/models--meta-llama--Llama-3.3-70B-Instruct<span class="w"> </span>/tmp/hf_home/hub
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>vllm<span class="w"> </span>serve<span class="w"> </span>meta-llama/Llama-3.3-70B-Instruct<span class="w"> </span>--tensor-parallel-size<span class="w"> </span><span class="m">8</span>
-</code></pre></div>
-<h3 id="large-models-multiple-nodes">Large Models (Multiple Nodes)</h3>
-<p>For models that exceed single-node capacity, Aegis handles multi-node orchestration automatically. Configure <code>tensor_parallel_size</code> to exceed the GPUs on a single node (12 on Aurora) and Aegis will allocate the necessary nodes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">large-model/name</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nt">tensor_parallel_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">24</span><span class="w">  </span><span class="c1"># spans 2 nodes</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nt">instances</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-</code></pre></div>
-<h2 id="using-aegis-on-aurora">Using Aegis on Aurora</h2>
-<p>With Aegis, the environment setup, weight staging, and instance orchestration are handled automatically. Create a config file and submit:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>aegis<span class="w"> </span>submit<span class="w"> </span>--config<span class="w"> </span>config.yaml
-</code></pre></div>
-<p>See <a href="../../getting-started/">Getting Started</a> for a full walkthrough.</p>
+<p>These flags can be combined — see <a href="../../cli/">CLI Reference</a> for the full list.</p>
+<h2 id="vllm-availability">vLLM Availability</h2>
+<p>vLLM is pre-installed on Aurora compute nodes via <code>module load frameworks</code>. Alternatively, distribute a custom environment with the <code>--conda-env</code> option (see <a href="../../getting-started/#staging-a-conda-environment">Getting Started</a>).</p>
 
 
 
