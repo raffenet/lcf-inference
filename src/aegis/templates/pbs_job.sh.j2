@@ -76,3 +76,7 @@ cat > ${PBS_O_WORKDIR}/.aegis_config.yaml << 'AEGIS_CONFIG_EOF'
 {{ config_yaml }}AEGIS_CONFIG_EOF
 
 aegis launch --config ${PBS_O_WORKDIR}/.aegis_config.yaml
+
+# Keep the job alive so vLLM servers remain running until walltime expires.
+echo "Instances launched. Sleeping until walltime expires..."
+sleep infinity
