@@ -228,6 +228,9 @@ def wait_for_endpoints(
         file=sys.stderr,
     )
 
+    last_state = None
+    start = time.monotonic()
+
     while True:
         # Check if endpoints file is ready
         endpoints = _read_endpoints_file(endpoints_file, ssh)
@@ -250,12 +253,27 @@ def wait_for_endpoints(
         state = _get_job_state(job_id, ssh)
         if state is None:
             print(
-                f"Error: Job {job_id} is no longer tracked by the scheduler "
+                f"\nError: Job {job_id} is no longer tracked by the scheduler "
                 f"and endpoints file was not found.",
                 file=sys.stderr,
             )
             sys.exit(1)
 
         label = _JOB_STATE_LABELS.get(state, state)
-        print(f"  Job {job_id} is {label}, waiting ...", file=sys.stderr)
+        elapsed = int(time.monotonic() - start)
+        minutes, seconds = divmod(elapsed, 60)
+
+        if state != last_state:
+            # Print new state on its own line
+            print(
+                f"\n  Job is {label} ({minutes}m{seconds:02d}s elapsed)",
+                file=sys.stderr,
+                end="",
+            )
+            last_state = state
+        else:
+            # Same state — just print a dot to show progress
+            print(".", file=sys.stderr, end="", flush=True)
+
         time.sleep(poll_interval)
+
