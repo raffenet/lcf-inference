@@ -1,0 +1,69 @@
+#!/bin/bash
+#PBS -N vllm
+#PBS -l walltime=00:30:00
+#PBS -o output.log
+#PBS -e error.log
+#PBS -l filesystems=flare:home
+#PBS -A ModCon
+
+module load frameworks
+
+export HTTP_PROXY=http://proxy.alcf.anl.gov:3128
+export HTTPS_PROXY=http://proxy.alcf.anl.gov:3128
+export http_proxy=http://proxy.alcf.anl.gov:3128
+export https_proxy=http://proxy.alcf.anl.gov:3128
+export no_proxy=localhost,127.0.0.1
+
+NNODES=`cat $PBS_NODEFILE | uniq | wc -l`
+
+if [ -z "${HF_TOKEN:-}" ]; then
+    echo "Error: HF_TOKEN not set. Please export it and pass with qsub -v HF_TOKEN"
+    exit 1
+fi
+
+# --- 0. PREPARE COPY TOOL ---
+# Path to your C source file (Adjust if needed, assuming it's in the submission dir)
+TOOLS_DIR="${PBS_O_WORKDIR}/tools"
+BCAST_BIN="${PBS_O_WORKDIR}/bcast"
+
+# Compile the bcast tool
+pushd $TOOLS_DIR
+make bcast
+cp bcast $BCAST_BIN
+popd
+
+# --- OPTIMIZED ENV VARS ---
+# Enable these for better broadcast performance on Aurora
+export MPIR_CVAR_CH4_OFI_ENABLE_MULTI_NIC_STRIPING=1
+export MPIR_CVAR_CH4_OFI_MAX_NICS=4
+
+start_time=$(date +%s)
+
+echo "Cleaning up tmp"
+
+# --- 1. STAGE MODEL WEIGHTS ---
+rm -rf /tmp/hub
+copy_start=$(date +%s)
+MODEL_SOURCE="/flare/datasets/model-weights/hub/models--meta-llama--Llama-3.3-70B-Instruct"
+MODEL_DEST="/tmp/hf_home/hub"
+
+echo "Staging weights from $MODEL_SOURCE to $MODEL_DEST..."
+
+# Run the copy tool with mpiexec (PPN=1)
+mpiexec -ppn 1 --cpu-bind numa $BCAST_BIN "$MODEL_SOURCE" "$MODEL_DEST"
+
+copy_end=$(date +%s)
+weights_copy_time=$((copy_end - copy_start))
+
+# --- 2. RUN VLLM ---
+export HF_TOKEN
+echo "Starting vLLM instances..."
+mpiexec -ppn 1 -o %a/%h/out.%R ./start_instance.sh
+
+end_time=$(date +%s)
+if [ -z "$checkpoint_start" ]; then
+    checkpoint_start=$end_time
+fi
+
+# --- 3. REPORT METRICS ---
+# TODO
