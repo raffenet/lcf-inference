@@ -80,6 +80,7 @@ hf_home: /tmp/hf_home
 model_source: /flare/datasets/model-weights/hub/models--meta-llama--Llama-3.3-70B-Instruct
 walltime: "01:00:00"
 account: MyProject
+queue: debug
 filesystems: flare:home
 extra_vllm_args:
   - --max-model-len
