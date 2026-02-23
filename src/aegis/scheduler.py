@@ -262,10 +262,6 @@ def wait_for_endpoints(
                     file=sys.stderr,
                 )
 
-            print("\nEndpoints:", file=sys.stderr)
-            for ep in endpoints:
-                print(ep)
-
             # Print registry URL and usage hint
             registry_url = _read_registry_url(endpoints_file, ssh)
             if registry_url:

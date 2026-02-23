@@ -310,7 +310,15 @@ def launch_instances(config: AegisConfig) -> None:
         stderr=heartbeat_log,
     )
     print(f"Started heartbeat monitor for {len(endpoints)} instance(s)", file=sys.stderr)
+    print(f"Service registry: http://{head_node}:{config.registry_port}", file=sys.stderr)
     print(f"Logs: {log_dir}", file=sys.stderr)
+
+    # Write the registry URL sidecar file early so the submit side can find it
+    # as soon as the registry is available, even before instances are healthy.
+    registry_url = f"http://{head_node}:{config.registry_port}"
+    registry_file = Path(config.endpoints_file).parent / "aegis_registry_url.txt"
+    with open(registry_file, "w") as f:
+        f.write(registry_url + "\n")
 
     healthy = _wait_for_instances(endpoints, timeout=config.startup_timeout)
 
@@ -330,15 +338,8 @@ def launch_instances(config: AegisConfig) -> None:
         for node, port in healthy:
             f.write(f"{node}:{port}\n")
 
-    # Write a sidecar file with the registry URL so the submit side can find it.
-    registry_url = f"http://{head_node}:{config.registry_port}"
-    registry_file = endpoints_file.parent / "aegis_registry_url.txt"
-    with open(registry_file, "w") as f:
-        f.write(registry_url + "\n")
-
     print(
         f"{len(healthy)}/{total_instances} instance(s) are healthy.",
         file=sys.stderr,
     )
     print(f"Endpoints written to {endpoints_file.resolve()}", file=sys.stderr)
-    print(f"Service registry: http://{head_node}:{config.registry_port}", file=sys.stderr)
