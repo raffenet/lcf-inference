@@ -262,7 +262,7 @@ def wait_for_endpoints(
                     file=sys.stderr,
                 )
 
-            print("Endpoints:", file=sys.stderr)
+            print("\nEndpoints:", file=sys.stderr)
             for ep in endpoints:
                 print(ep)
 
