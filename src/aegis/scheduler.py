@@ -29,7 +29,7 @@ def generate_pbs_script(config: AegisConfig) -> str:
     return template.render(config=config, config_yaml=config_yaml)
 
 
-def submit_job(script: str) -> str:
+def submit_job(script: str, hf_token: str | None = None) -> str:
     """Write the PBS script to a temp file and submit via qsub. Returns the job ID."""
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".pbs", prefix="aegis_", delete=False
@@ -37,9 +37,14 @@ def submit_job(script: str) -> str:
         f.write(script)
         script_path = f.name
 
+    qsub_cmd = ["qsub"]
+    if hf_token:
+        qsub_cmd += ["-v", "HF_TOKEN"]
+    qsub_cmd.append(script_path)
+
     print(f"Submitting PBS script: {script_path}", file=sys.stderr)
     result = subprocess.run(
-        ["qsub", script_path],
+        qsub_cmd,
         capture_output=True,
         text=True,
     )
@@ -138,7 +143,7 @@ class SSHConnection:
         )
 
 
-def submit_job_remote(script: str, ssh: SSHConnection) -> str:
+def submit_job_remote(script: str, ssh: SSHConnection, hf_token: str | None = None) -> str:
     """Submit a PBS job via an SSH connection. Returns the job ID."""
     remote_script = f"~/.{uuid4().hex[:8]}.aegis.pbs"
 
@@ -151,8 +156,12 @@ def submit_job_remote(script: str, ssh: SSHConnection) -> str:
     print(f"Copying PBS script to {ssh.remote}:{remote_script}", file=sys.stderr)
     ssh.scp_to(local_path, remote_script)
 
+    qsub_cmd = "qsub"
+    if hf_token:
+        qsub_cmd += f" -v HF_TOKEN={shlex.quote(hf_token)}"
+
     print("Submitting PBS job via SSH ...", file=sys.stderr)
-    result = ssh.run(f"qsub {remote_script} && rm -f {remote_script}")
+    result = ssh.run(f"{qsub_cmd} {remote_script} && rm -f {remote_script}")
     if result.returncode != 0:
         # Clean up remote file on failure too
         ssh.run(f"rm -f {remote_script}")

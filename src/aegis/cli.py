@@ -131,6 +131,9 @@ def cmd_submit(args) -> None:
         print(script)
         return
 
+    # Forward HF_TOKEN from the environment to the PBS job if not in config
+    hf_token = None if config.hf_token else os.environ.get("HF_TOKEN")
+
     ssh = None
     if args.remote:
         ssh = SSHConnection(args.remote)
@@ -147,9 +150,9 @@ def cmd_submit(args) -> None:
                 Path(registry_file).unlink(missing_ok=True)
 
         if ssh:
-            job_id = submit_job_remote(script, ssh)
+            job_id = submit_job_remote(script, ssh, hf_token=hf_token)
         else:
-            job_id = submit_job(script)
+            job_id = submit_job(script, hf_token=hf_token)
 
         if args.wait:
             wait_for_endpoints(config.endpoints_file, job_id, ssh=ssh)
