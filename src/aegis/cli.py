@@ -394,7 +394,7 @@ def cmd_bench(args) -> None:
         if args.conda_env:
             env_export = f"export HF_TOKEN={shlex.quote(hf_token)}" if hf_token else ""
             activate = f"source {args.conda_env}/bin/activate"
-            parts = [p for p in [env_export, activate, shlex.join(vllm_args)] if p]
+            parts = [p for p in [activate, env_export, shlex.join(vllm_args)] if p]
             rank_cmd = ["bash", "-c", " && ".join(parts)]
         else:
             rank_cmd = vllm_args
