@@ -384,7 +384,8 @@ def cmd_bench(args) -> None:
             "--model", args.model,
             "--num-prompts", str(args.num_prompts),
             "--base-url", base_url,
-            "--save-result-dir", result_dir,
+            "--save-result",
+            "--result-dir", result_dir,
             *extra,
         ]
         if args.conda_env:
