@@ -722,6 +722,8 @@
 <ol>
 <li><strong><code>aegis submit</code></strong> renders a PBS batch script from a Jinja2 template and submits it via <code>qsub</code>. The generated job script calls <code>aegis launch</code> inside the allocation.</li>
 <li><strong><code>aegis launch</code></strong> runs inside a PBS allocation. It optionally stages model weights to local storage using MPI broadcast, then launches one <code>vllm serve</code> process per instance on the assigned nodes.</li>
+<li><strong><code>aegis bench</code></strong> benchmarks running instances in parallel via <code>mpiexec</code> and aggregates results into CSV.</li>
+<li><strong><code>aegis shutdown</code></strong> tears down instances by killing vLLM processes on nodes and/or cancelling PBS jobs.</li>
 </ol>
 <h2 id="architecture">Architecture</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>src/aegis/

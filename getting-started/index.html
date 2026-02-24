@@ -450,6 +450,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#6-benchmark-running-instances" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Benchmark running instances
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-shut-down-instances" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Shut down instances
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -842,6 +864,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#6-benchmark-running-instances" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Benchmark running instances
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-shut-down-instances" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Shut down instances
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -946,30 +990,47 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>aegis<span class="w"> </span>registry<span class="w"> </span>list
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>aegis<span class="w"> </span>registry<span class="w"> </span>list-healthy
 </code></pre></div>
+<h3 id="6-benchmark-running-instances">6. Benchmark running instances</h3>
+<p>Once instances are running, benchmark them:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>aegis<span class="w"> </span>bench<span class="w"> </span>--model<span class="w"> </span>meta-llama/Llama-3.3-70B-Instruct
+</code></pre></div>
+<p>This runs <code>vllm bench serve</code> in parallel across all endpoints listed in <code>aegis_endpoints.txt</code> and prints a CSV summary. Write results to a file with <code>--output</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>aegis<span class="w"> </span>bench<span class="w"> </span>--model<span class="w"> </span>meta-llama/Llama-3.3-70B-Instruct<span class="w"> </span>--output<span class="w"> </span>results.csv
+</code></pre></div>
+<h3 id="7-shut-down-instances">7. Shut down instances</h3>
+<p>When you're done, shut down the vLLM processes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>aegis<span class="w"> </span>shutdown
+</code></pre></div>
+<p>This reads <code>aegis_endpoints.txt</code> to find the nodes and kills vLLM processes on each one. To also cancel the PBS job:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>aegis<span class="w"> </span>shutdown<span class="w"> </span>--job-id<span class="w"> </span><span class="m">12345</span>.aurora-pbs-0001
+</code></pre></div>
+<p>If you submitted remotely, cancel the job via SSH:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>aegis<span class="w"> </span>shutdown<span class="w"> </span>--job-id<span class="w"> </span><span class="m">12345</span>.aurora-pbs-0001<span class="w"> </span>--remote<span class="w"> </span>user@aurora.alcf.anl.gov
+</code></pre></div>
 <h2 id="staging-a-conda-environment">Staging a Conda Environment</h2>
 <p>If your compute nodes don't have vLLM pre-installed, you can distribute a custom conda environment to all nodes using <a href="https://conda.github.io/conda-pack/">conda-pack</a>. First, create a tarball from an existing conda environment:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>conda<span class="w"> </span>pack<span class="w"> </span>-n<span class="w"> </span>my_vllm_env<span class="w"> </span>-o<span class="w"> </span>my_vllm_env.tar.gz
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>conda<span class="w"> </span>pack<span class="w"> </span>-n<span class="w"> </span>my_vllm_env<span class="w"> </span>-o<span class="w"> </span>my_vllm_env.tar.gz
 </code></pre></div>
 <p>Then reference it in your config file:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">meta-llama/Llama-3.3-70B-Instruct</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">instances</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nt">tensor_parallel_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="nt">conda_env</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/my_vllm_env.tar.gz</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="nt">walltime</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;01:00:00&quot;</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="nt">account</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MyProject</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="nt">filesystems</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">flare:home</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">meta-llama/Llama-3.3-70B-Instruct</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nt">instances</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="nt">tensor_parallel_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="nt">conda_env</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/my_vllm_env.tar.gz</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="nt">walltime</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;01:00:00&quot;</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="nt">account</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MyProject</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="nt">filesystems</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">flare:home</span>
 </code></pre></div>
 <p>Or pass it as a CLI flag:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>aegis<span class="w"> </span>submit<span class="w"> </span>--config<span class="w"> </span>config.yaml<span class="w"> </span>--conda-env<span class="w"> </span>/path/to/my_vllm_env.tar.gz
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>aegis<span class="w"> </span>submit<span class="w"> </span>--config<span class="w"> </span>config.yaml<span class="w"> </span>--conda-env<span class="w"> </span>/path/to/my_vllm_env.tar.gz
 </code></pre></div>
 <p>Aegis will broadcast the tarball to all compute nodes and activate the environment before launching vLLM instances.</p>
 <h2 id="overriding-config-via-cli">Overriding Config via CLI</h2>
 <p>All config values can be overridden with CLI flags. CLI flags take precedence over the config file:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>aegis<span class="w"> </span>submit<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span>--config<span class="w"> </span>config.yaml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span>--instances<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span>--walltime<span class="w"> </span><span class="m">02</span>:00:00<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span>--dry-run
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>aegis<span class="w"> </span>submit<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">    </span>--config<span class="w"> </span>config.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span>--instances<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span>--walltime<span class="w"> </span><span class="m">02</span>:00:00<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">    </span>--dry-run
 </code></pre></div>
 <p>See <a href="../cli/">CLI Reference</a> for all available flags and <a href="../configuration/">Configuration</a> for the full config format.</p>
 
