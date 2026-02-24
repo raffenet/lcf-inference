@@ -1,7 +1,7 @@
 site_name: Aegis
 site_description: HPC LLM Instance Launcher
-repo_url: https://github.com/argonne-lcf/lcf-inference
-repo_name: argonne-lcf/lcf-inference
+repo_url: https://github.com/AI-ModCon/BaseCAF_Aegis
+repo_name: AI-ModCon/BaseCAF_Aegis
 
 theme:
   name: material
