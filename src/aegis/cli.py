@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -245,6 +246,81 @@ def _add_registry_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# aegis bench subcommand
+# ---------------------------------------------------------------------------
+
+def _read_endpoints_file(path: str) -> list[str]:
+    """Read endpoints from a file, one host:port per line."""
+    endpoints = []
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                endpoints.append(line)
+    return endpoints
+
+
+def cmd_bench(args) -> None:
+    """Benchmark launched vLLM instances via vllm bench serve."""
+    # Resolve endpoints
+    if args.registry_host != "localhost":
+        client = ServiceRegistryClient(host=args.registry_host, port=args.registry_port)
+        services = client.get_healthy_services()
+        endpoints = [f"{s.host}:{s.port}" for s in services]
+        if not endpoints:
+            print("Error: no healthy endpoints found in registry.", file=sys.stderr)
+            sys.exit(1)
+    else:
+        ep_path = args.endpoints_file
+        if not os.path.exists(ep_path):
+            print(f"Error: endpoints file '{ep_path}' not found.", file=sys.stderr)
+            sys.exit(1)
+        endpoints = _read_endpoints_file(ep_path)
+        if not endpoints:
+            print(f"Error: no endpoints found in '{ep_path}'.", file=sys.stderr)
+            sys.exit(1)
+
+    extra = args.extra_args if args.extra_args else []
+    # Strip leading '--' separator that REMAINDER captures
+    if extra and extra[0] == "--":
+        extra = extra[1:]
+
+    # Group endpoints by port — endpoints sharing a port get a single SPMD
+    # segment; differing ports require separate MPMD segments.
+    hosts_by_port: dict[str, list[str]] = {}
+    for ep in endpoints:
+        host, port = ep.rsplit(":", 1)
+        hosts_by_port.setdefault(port, []).append(host)
+
+    # Build mpiexec command: SPMD per port group, MPMD across groups
+    mpi_cmd: list[str] = ["mpiexec"]
+    first = True
+    for port, hosts in hosts_by_port.items():
+        if not first:
+            mpi_cmd.append(":")
+        first = False
+        base_url = f"http://localhost:{port}/v1"
+        mpi_cmd.extend([
+            "-n", str(len(hosts)),
+            "-hosts", ",".join(hosts),
+            "vllm", "bench", "serve",
+            "--model", args.model,
+            "--num-prompts", str(args.num_prompts),
+            "--base-url", base_url,
+            *extra,
+        ])
+
+    print(f"Launching benchmarks on {len(endpoints)} endpoint(s) via mpiexec")
+    for ep in endpoints:
+        print(f"  {ep}")
+
+    proc = subprocess.run(mpi_cmd)
+    if proc.returncode != 0:
+        print(f"\nmpiexec exited with code {proc.returncode}", file=sys.stderr)
+        sys.exit(proc.returncode)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="aegis",
@@ -317,6 +393,24 @@ def main(argv: list[str] | None = None) -> None:
     _add_registry_args(reg_count)
     reg_count.add_argument("--type", type=str, default=None, help="Filter by service type")
     reg_count.set_defaults(func=cmd_registry_count)
+
+    # bench
+    bench_parser = subparsers.add_parser("bench", help="Benchmark launched vLLM instances")
+    bench_parser.add_argument("--model", type=str, required=True, help="Model name for the benchmark")
+    bench_parser.add_argument(
+        "--num-prompts", type=int, default=100, dest="num_prompts",
+        help="Number of prompts per endpoint (default: 100)",
+    )
+    bench_parser.add_argument(
+        "--endpoints-file", type=str, default="aegis_endpoints.txt", dest="endpoints_file",
+        help="Path to endpoints file (default: aegis_endpoints.txt)",
+    )
+    _add_registry_args(bench_parser)
+    bench_parser.add_argument(
+        "extra_args", nargs=argparse.REMAINDER,
+        help="Extra arguments passed through to vllm bench serve (put after --)",
+    )
+    bench_parser.set_defaults(func=cmd_bench)
 
     args = parser.parse_args(argv)
 
