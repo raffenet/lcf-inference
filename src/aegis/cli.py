@@ -313,8 +313,10 @@ def cmd_bench(args) -> None:
     if extra and extra[0] == "--":
         extra = extra[1:]
 
-    # Create temp directory for JSON result files
-    result_dir = tempfile.mkdtemp(prefix="aegis_bench_")
+    # Create temp directory for JSON result files on the shared filesystem so
+    # all ranks (potentially on different nodes) can write to the same path.
+    bench_base = os.environ.get("PBS_O_WORKDIR", ".")
+    result_dir = tempfile.mkdtemp(prefix="aegis_bench_", dir=bench_base)
 
     # Group endpoints by port — endpoints sharing a port get a single SPMD
     # segment; differing ports require separate MPMD segments.
