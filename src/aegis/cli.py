@@ -416,7 +416,9 @@ def cmd_bench(args) -> None:
             parts = [p for p in [activate, env_export, shlex.join(vllm_args)] if p]
             rank_cmd = ["bash", "-c", " && ".join(parts)]
         else:
-            rank_cmd = vllm_args
+            env_export = f"export HF_TOKEN={shlex.quote(hf_token)}" if hf_token else ""
+            parts = [p for p in ["module load frameworks", env_export, shlex.join(vllm_args)] if p]
+            rank_cmd = ["bash", "-l", "-c", " && ".join(parts)]
         env_flags = ["-env", "HF_TOKEN", hf_token] if hf_token else []
         mpi_cmd.extend([
             "-n", str(len(hosts)),
