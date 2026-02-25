@@ -91,9 +91,6 @@ bench_args=(
 {% if config.conda_env %}
     --conda-env /tmp/conda_env
 {% endif %}
-{% if config.bench_output %}
-    --output {{ config.bench_output }}
-{% endif %}
 )
 aegis bench "${bench_args[@]}"
 echo "Benchmark complete. Exiting."

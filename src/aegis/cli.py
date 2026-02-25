@@ -1,7 +1,6 @@
 """CLI entry point for Aegis."""
 
 import argparse
-import csv
 import glob
 import json
 import os
@@ -271,90 +270,22 @@ def _read_endpoints_file(path: str) -> list[str]:
     return endpoints
 
 
-_BENCH_METRICS = [
-    "request_throughput", "output_throughput", "total_token_throughput",
-    "mean_ttft_ms", "median_ttft_ms", "p99_ttft_ms",
-    "mean_tpot_ms", "median_tpot_ms", "p99_tpot_ms",
-    "mean_itl_ms", "median_itl_ms", "p99_itl_ms",
-    "duration", "completed", "total_input_tokens", "total_output_tokens",
-]
-
-_ADDITIVE_METRICS = {
-    "request_throughput", "output_throughput_tok_s", "total_token_throughput",
-    "completed", "total_input_tokens", "total_output_tokens",
-}
-
-
 def _parse_bench_results(result_dir: str) -> list[dict]:
     """Parse JSON result files produced by vllm bench serve."""
     results = []
     for path in sorted(glob.glob(os.path.join(result_dir, "*.json"))):
         with open(path) as f:
             data = json.load(f)
-        row: dict = {}
-        # Identify endpoint from the base_url stored in the JSON
         base_url = data.get("base_url", "")
         if base_url:
-            # Strip scheme and /v1 suffix to get host:port
             endpoint = base_url.replace("http://", "").replace("https://", "").rstrip("/")
             if endpoint.endswith("/v1"):
                 endpoint = endpoint[:-3]
-            row["endpoint"] = endpoint
         else:
-            row["endpoint"] = Path(path).stem
-        for key in _BENCH_METRICS:
-            if key in data:
-                row[key] = data[key]
-        if "output_throughput" in row:
-            row["output_throughput_tok_s"] = row.pop("output_throughput")
-        results.append(row)
+            endpoint = Path(path).stem
+        tok_s = data.get("output_throughput")
+        results.append({"endpoint": endpoint, "output_throughput_tok_s": tok_s})
     return results
-
-
-def _write_bench_csv(results: list[dict], output_path: str | None = None) -> None:
-    """Write benchmark results as CSV with a summary row."""
-    if not results:
-        return
-    columns = list(results[0].keys())
-    # Ensure consistent column order across all rows
-    for r in results[1:]:
-        for k in r:
-            if k not in columns:
-                columns.append(k)
-
-    numeric_cols = [c for c in columns if c != "endpoint"]
-
-    # Compute TOTAL row (sum additive metrics only; leave latency columns blank)
-    total: dict = {"endpoint": "TOTAL"}
-    for col in numeric_cols:
-        if col in _ADDITIVE_METRICS:
-            vals = [r[col] for r in results if col in r and isinstance(r[col], (int, float))]
-            if vals:
-                total[col] = sum(vals)
-
-    # Compute summary row
-    summary: dict = {"endpoint": "SUMMARY"}
-    for col in numeric_cols:
-        vals = [r[col] for r in results if col in r and isinstance(r[col], (int, float))]
-        if vals:
-            mn, mx, avg = min(vals), max(vals), sum(vals) / len(vals)
-            summary[col] = f"min={mn:.2f} max={mx:.2f} mean={avg:.2f}"
-
-    if output_path:
-        fh = open(output_path, "w", newline="")
-    else:
-        fh = sys.stdout
-
-    try:
-        writer = csv.DictWriter(fh, fieldnames=columns, extrasaction="ignore")
-        writer.writeheader()
-        for r in results:
-            writer.writerow(r)
-        writer.writerow(total)
-        writer.writerow(summary)
-    finally:
-        if output_path:
-            fh.close()
 
 
 def cmd_bench(args) -> None:
@@ -439,19 +370,16 @@ def cmd_bench(args) -> None:
             print(f"\nmpiexec exited with code {proc.returncode}", file=sys.stderr)
             sys.exit(proc.returncode)
 
-        # Post-process results into CSV
         results = _parse_bench_results(result_dir)
         if results:
-            cumulative_tok_s = sum(
-                r["output_throughput_tok_s"]
-                for r in results
-                if isinstance(r.get("output_throughput_tok_s"), (int, float))
-            )
-            print(f"\nCumulative output throughput: {cumulative_tok_s:.1f} tok/s ({len(results)} endpoint(s))")
-            output_path = getattr(args, "output", None)
-            _write_bench_csv(results, output_path)
-            if output_path:
-                print(f"Results written to {output_path}")
+            print("\nBenchmark results:")
+            for r in results:
+                tok_s = r.get("output_throughput_tok_s")
+                val = f"{tok_s:.1f}" if isinstance(tok_s, (int, float)) else "N/A"
+                print(f"  {r['endpoint']:<30} {val} tok/s")
+            total = sum(r["output_throughput_tok_s"] for r in results
+                        if isinstance(r.get("output_throughput_tok_s"), (int, float)))
+            print(f"  {'TOTAL':<30} {total:.1f} tok/s")
         else:
             print("Warning: no benchmark result files found.", file=sys.stderr)
     finally:
@@ -552,10 +480,6 @@ def main(argv: list[str] | None = None) -> None:
         help="Number of prompts per endpoint for the benchmark (default: 100)",
     )
     submit_parser.add_argument(
-        "--bench-output", type=str, dest="bench_output", default=None,
-        help="Path to write benchmark CSV results",
-    )
-    submit_parser.add_argument(
         "--remote", type=str, metavar="USER@HOST",
         help="Submit via SSH to a remote login node (e.g., user@aurora.alcf.anl.gov)",
     )
@@ -614,10 +538,6 @@ def main(argv: list[str] | None = None) -> None:
     bench_parser.add_argument(
         "--endpoints-file", type=str, default="aegis_endpoints.txt", dest="endpoints_file",
         help="Path to endpoints file (default: aegis_endpoints.txt)",
-    )
-    bench_parser.add_argument(
-        "--output", type=str, default=None,
-        help="Path to write CSV results (default: print to stdout)",
     )
     bench_parser.add_argument(
         "--conda-env", type=str, default=None, dest="conda_env",
