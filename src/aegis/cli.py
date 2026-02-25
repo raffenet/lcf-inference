@@ -267,12 +267,17 @@ def _read_endpoints_file(path: str) -> list[str]:
 
 
 _BENCH_METRICS = [
-    "request_throughput", "output_throughput_tok_s", "total_token_throughput",
+    "request_throughput", "output_throughput", "total_token_throughput",
     "mean_ttft_ms", "median_ttft_ms", "p99_ttft_ms",
     "mean_tpot_ms", "median_tpot_ms", "p99_tpot_ms",
     "mean_itl_ms", "median_itl_ms", "p99_itl_ms",
     "duration", "completed", "total_input_tokens", "total_output_tokens",
 ]
+
+_ADDITIVE_METRICS = {
+    "request_throughput", "output_throughput_tok_s", "total_token_throughput",
+    "completed", "total_input_tokens", "total_output_tokens",
+}
 
 
 def _parse_bench_results(result_dir: str) -> list[dict]:
@@ -295,6 +300,8 @@ def _parse_bench_results(result_dir: str) -> list[dict]:
         for key in _BENCH_METRICS:
             if key in data:
                 row[key] = data[key]
+        if "output_throughput" in row:
+            row["output_throughput_tok_s"] = row.pop("output_throughput")
         results.append(row)
     return results
 
@@ -311,6 +318,14 @@ def _write_bench_csv(results: list[dict], output_path: str | None = None) -> Non
                 columns.append(k)
 
     numeric_cols = [c for c in columns if c != "endpoint"]
+
+    # Compute TOTAL row (sum additive metrics only; leave latency columns blank)
+    total: dict = {"endpoint": "TOTAL"}
+    for col in numeric_cols:
+        if col in _ADDITIVE_METRICS:
+            vals = [r[col] for r in results if col in r and isinstance(r[col], (int, float))]
+            if vals:
+                total[col] = sum(vals)
 
     # Compute summary row
     summary: dict = {"endpoint": "SUMMARY"}
@@ -330,6 +345,7 @@ def _write_bench_csv(results: list[dict], output_path: str | None = None) -> Non
         writer.writeheader()
         for r in results:
             writer.writerow(r)
+        writer.writerow(total)
         writer.writerow(summary)
     finally:
         if output_path:
@@ -417,10 +433,16 @@ def cmd_bench(args) -> None:
         # Post-process results into CSV
         results = _parse_bench_results(result_dir)
         if results:
+            cumulative_tok_s = sum(
+                r["output_throughput_tok_s"]
+                for r in results
+                if isinstance(r.get("output_throughput_tok_s"), (int, float))
+            )
+            print(f"\nCumulative output throughput: {cumulative_tok_s:.1f} tok/s ({len(results)} endpoint(s))")
             output_path = getattr(args, "output", None)
             _write_bench_csv(results, output_path)
             if output_path:
-                print(f"\nResults written to {output_path}")
+                print(f"Results written to {output_path}")
         else:
             print("Warning: no benchmark result files found.", file=sys.stderr)
     finally:
