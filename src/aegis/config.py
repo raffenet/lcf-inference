@@ -46,6 +46,7 @@ class AegisConfig:
     account: str = ""
     filesystems: str = "flare:home"
     conda_env: Optional[str] = None
+    apptainer_image: Optional[str] = None
 
     # In-process service registry (HTTP API port)
     registry_port: int = 8471
@@ -149,6 +150,8 @@ def config_to_yaml(config: AegisConfig) -> str:
     data["filesystems"] = config.filesystems
     if config.conda_env:
         data["conda_env"] = config.conda_env
+    if config.apptainer_image:
+        data["apptainer_image"] = config.apptainer_image
 
     # Models list
     models_list = []

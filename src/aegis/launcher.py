@@ -103,6 +103,29 @@ def stage_conda_env(config: AegisConfig) -> None:
     print("Conda env staging complete.", file=sys.stderr)
 
 
+def stage_apptainer_image(config: AegisConfig) -> None:
+    """Compile bcast (if needed) and broadcast an Apptainer image to all nodes."""
+    if not config.apptainer_image:
+        return
+
+    bcast_bin = _ensure_bcast()
+    image = config.apptainer_image
+    print(f"Staging apptainer image: {image} -> /tmp", file=sys.stderr)
+
+    env = os.environ.copy()
+    env["MPIR_CVAR_CH4_OFI_ENABLE_MULTI_NIC_STRIPING"] = "1"
+    env["MPIR_CVAR_CH4_OFI_MAX_NICS"] = "4"
+
+    cmd = ["mpiexec", "-ppn", "1", "--cpu-bind", "numa", str(bcast_bin), image, "/tmp"]
+    _vlog(f"  [apptainer-stage] {shlex.join(cmd)}")
+    result = subprocess.run(cmd, env=env)
+    if result.returncode != 0:
+        print("Apptainer image staging failed.", file=sys.stderr)
+        sys.exit(1)
+
+    print("Apptainer image staging complete.", file=sys.stderr)
+
+
 def _download_hf_weights(config: AegisConfig) -> None:
     """Download model weights from HuggingFace Hub for models that request it."""
     models_to_download = [
@@ -261,6 +284,7 @@ def launch_instances(config: AegisConfig) -> None:
                 hf_home=config.hf_home,
                 extra_vllm_args=model_cfg.extra_vllm_args,
                 conda_env=config.conda_env,
+                apptainer_image=config.apptainer_image,
             )
 
             # Write to a temp file on the shared filesystem

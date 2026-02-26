@@ -51,6 +51,9 @@ bench_args=(
 {% if config.conda_env %}
     --conda-env /tmp/conda_env
 {% endif %}
+{% if config.apptainer_image %}
+    --apptainer-image /tmp/{{ config.apptainer_image.split('/')[-1] }}
+{% endif %}
 )
 aegis bench "${bench_args[@]}"
 echo "Benchmark complete. Exiting."

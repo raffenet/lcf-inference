@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 
 from .config import AegisConfig, load_config, merge_cli_args, _normalize_models
-from .launcher import launch_instances, stage_conda_env, stage_weights, set_verbose as _launcher_set_verbose
+from .launcher import launch_instances, stage_conda_env, stage_apptainer_image, stage_weights, set_verbose as _launcher_set_verbose
 from .registry import ServiceRegistryClient, ServiceStatus
 from .scheduler import (
     SSHConnection,
@@ -63,6 +63,10 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--conda-env", type=str, dest="conda_env",
         help="Path to a conda-pack tarball to distribute and activate on all nodes",
+    )
+    parser.add_argument(
+        "--apptainer-image", type=str, dest="apptainer_image",
+        help="Path to an Apptainer image to distribute and use for vllm commands",
     )
     parser.add_argument(
         "--startup-timeout", type=int, dest="startup_timeout",
@@ -183,6 +187,7 @@ def cmd_launch(args) -> None:
 
     if not args.skip_staging:
         stage_conda_env(config)
+        stage_apptainer_image(config)
         stage_weights(config)
     else:
         print("Skipping conda env and weight staging (--skip-staging)", file=sys.stderr)
@@ -350,6 +355,12 @@ def cmd_bench(args) -> None:
             env_export = f"export HF_TOKEN={shlex.quote(hf_token)}" if hf_token else ""
             activate = f"source {args.conda_env}/bin/activate"
             parts = [p for p in [activate, env_export, cmd_str] if p]
+            rank_cmd = ["bash", "-c", " && ".join(parts)]
+        elif args.apptainer_image:
+            image_basename = os.path.basename(args.apptainer_image)
+            env_export = f"export HF_TOKEN={shlex.quote(hf_token)}" if hf_token else ""
+            apptainer_cmd = f"apptainer exec /tmp/{image_basename} {cmd_str}"
+            parts = [p for p in [env_export, apptainer_cmd] if p]
             rank_cmd = ["bash", "-c", " && ".join(parts)]
         else:
             env_export = f"export HF_TOKEN={shlex.quote(hf_token)}" if hf_token else ""
@@ -547,6 +558,10 @@ def main(argv: list[str] | None = None) -> None:
     bench_parser.add_argument(
         "--conda-env", type=str, default=None, dest="conda_env",
         help="Path to staged conda environment directory (default: /tmp/conda_env)",
+    )
+    bench_parser.add_argument(
+        "--apptainer-image", type=str, default=None, dest="apptainer_image",
+        help="Path to staged Apptainer image (e.g. /tmp/vllm.sif)",
     )
     _add_registry_args(bench_parser)
     bench_parser.add_argument(

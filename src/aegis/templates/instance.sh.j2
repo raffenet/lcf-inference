@@ -30,6 +30,8 @@ export VLLM_CACHE_ROOT="/tmp/hf_home/vllm_cache"
 export HF_DATASETS_CACHE="/tmp/hf_home"
 export HF_MODULES_CACHE="/tmp/hf_home"
 export HF_HUB_OFFLINE=1
+{% elif apptainer_image %}
+# Apptainer container provides the vLLM environment; no module loading needed.
 {% else %}
 module load frameworks
 export CCL_PROCESS_LAUNCHER=torchrun
@@ -42,7 +44,11 @@ if [ -z "${HF_TOKEN:-}" ]; then
 fi
 export HF_HOME="{{ hf_home }}"
 
+{% if apptainer_image %}
+numactl --cpunodebind=0 --membind=0 apptainer exec /tmp/{{ apptainer_image.split('/')[-1] }} vllm serve {{ model }} \
+{% else %}
 numactl --cpunodebind=0 --membind=0 vllm serve {{ model }} \
+{% endif %}
     --dtype bfloat16 \
     --tensor-parallel-size {{ tensor_parallel_size }} \
     --port {{ port }} \
