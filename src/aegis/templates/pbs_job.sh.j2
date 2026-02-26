@@ -7,7 +7,6 @@
 {% if config.queue -%}
 #PBS -q {{ config.queue }}
 {% endif -%}
-#PBS -o aegis_output.log
 #PBS -j oe
 
 cd "$PBS_O_WORKDIR"
