@@ -59,7 +59,7 @@ export HF_HOME="{{ hf_home }}"
 numactl --cpunodebind=0 --membind=0 apptainer exec /tmp/{{ apptainer_image.split('/')[-1] }} vllm serve {{ model }} \
 {% else %}
 numactl --cpunodebind=0 --membind=0 vllm serve {{ model }} \
-{% endif %}
+{% endif -%}
     --dtype bfloat16 \
     --tensor-parallel-size {{ tensor_parallel_size }} \
     --port {{ port }} \
