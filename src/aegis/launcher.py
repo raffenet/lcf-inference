@@ -250,8 +250,9 @@ def _wait_for_instances(
                 print(f"  {node}:{port}  {ready_times[(node, port)]:.1f}s", file=sys.stderr)
             else:
                 print(f"  {node}:{port}  timed out", file=sys.stderr)
-        avg = sum(ready_times.values()) / len(ready_times)
-        print(f"  Average: {avg:.1f}s", file=sys.stderr)
+        times = list(ready_times.values())
+        avg = sum(times) / len(times)
+        print(f"  Average: {avg:.1f}s (min {min(times):.1f}s, max {max(times):.1f}s)", file=sys.stderr)
 
     return [(n, p) for n, p in endpoints if (n, p) in ready]
 
