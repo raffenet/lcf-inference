@@ -415,6 +415,7 @@ def launch_instances(
             f.write(f"{node}:{port}\n")
 
     total_wait = time.monotonic() - t_wait_start
+    total_staging = sum(staging_times.values()) if staging_times else 0.0
 
     if staging_times:
         print("Staging times:", file=sys.stderr)
@@ -423,12 +424,11 @@ def launch_instances(
             t = staging_times.get(key)
             if t is not None:
                 print(f"  {label + ':':<20} {t:.1f}s", file=sys.stderr)
-        total_staging = sum(staging_times.values())
         print(f"  {'total:':<20} {total_staging:.1f}s", file=sys.stderr)
 
     print(
         f"{len(healthy)}/{total_instances} instance(s) are healthy "
-        f"(total wait: {total_wait:.1f}s).",
+        f"(total wait: {total_wait + total_staging:.1f}s).",
         file=sys.stderr,
     )
     print(f"Endpoints written to {endpoints_file.resolve()}", file=sys.stderr)
