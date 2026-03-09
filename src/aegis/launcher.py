@@ -305,69 +305,68 @@ def launch_instances(
     env = _get_template_env()
     template = env.get_template("instance.sh.j2")
 
-    processes = []
     endpoints = []
     tmp_files = []
-    node_port_counter: dict[str, int] = {}
     instance_idx = 0
     node_offset = 0
+    all_instance_nodes = []
 
     for model_cfg in config.models:
+        port = config.port_start
+        script_content = template.render(
+            model=model_cfg.model,
+            tensor_parallel_size=model_cfg.tensor_parallel_size,
+            port=port,
+            hf_home=config.hf_home,
+            extra_vllm_args=model_cfg.extra_vllm_args,
+            conda_env=config.conda_env,
+            apptainer_image=config.apptainer_image,
+        )
+        script_file = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".sh", prefix=f"aegis_model_{model_cfg.model.replace('/', '_')}_",
+            dir=shared_tmpdir, delete=False,
+        )
+        script_file.write(script_content)
+        script_file.close()
+        os.chmod(script_file.name, 0o755)
+        tmp_files.append(script_file.name)
+
         for j in range(model_cfg.instances):
-            npi = model_cfg.nodes_per_instance
-            instance_nodes = nodes[node_offset : node_offset + npi]
-            head_node = instance_nodes[0]
-            port = config.port_start + node_port_counter.get(head_node, 0)
-            node_port_counter[head_node] = node_port_counter.get(head_node, 0) + 1
-            endpoints.append((head_node, port))
-
-            # Render the per-instance script
-            script_content = template.render(
-                model=model_cfg.model,
-                tensor_parallel_size=model_cfg.tensor_parallel_size,
-                port=port,
-                hf_home=config.hf_home,
-                extra_vllm_args=model_cfg.extra_vllm_args,
-                conda_env=config.conda_env,
-                apptainer_image=config.apptainer_image,
-            )
-
-            # Write to a temp file on the shared filesystem
-            script_file = tempfile.NamedTemporaryFile(
-                mode="w", suffix=".sh", prefix=f"aegis_instance_{instance_idx}_",
-                dir=shared_tmpdir, delete=False,
-            )
-            script_file.write(script_content)
-            script_file.close()
-            os.chmod(script_file.name, 0o755)
-            tmp_files.append(script_file.name)
-
-            # Build hostfile for this instance's nodes
-            hostfile = tempfile.NamedTemporaryFile(
-                mode="w", suffix=".hosts", prefix=f"aegis_hosts_{instance_idx}_",
-                dir=shared_tmpdir, delete=False,
-            )
-            for node in instance_nodes:
-                hostfile.write(f"{node}\n")
-            hostfile.close()
-            tmp_files.append(hostfile.name)
-
-            _vlog(
-                f"  [instance {instance_idx}] {model_cfg.model} "
-                f"nodes={instance_nodes} port={port} script={script_file.name}"
-            )
-
-            mpi_launch_cmd = [
-                "mpiexec", "-ppn", "1",
-                "--hostfile", hostfile.name,
-                "-o", f"{log_dir}/{instance_idx}/%h/out.%R",
-                script_file.name,
-            ]
-            _vlog(f"  [instance {instance_idx}] {shlex.join(mpi_launch_cmd)}")
-            proc = subprocess.Popen(mpi_launch_cmd, env=os.environ)
-            processes.append(proc)
+            node = nodes[node_offset]
+            endpoints.append((node, port))
+            all_instance_nodes.append((node, script_file.name, instance_idx))
+            _vlog(f"  [instance {instance_idx}] {model_cfg.model} node={node} port={port}")
             instance_idx += 1
-            node_offset += npi
+            node_offset += 1
+
+    # Single hostfile and single mpiexec across all instances.
+    # All instances use the same port — no conflict since each is on a distinct host.
+    hostfile = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".hosts", prefix="aegis_hosts_",
+        dir=shared_tmpdir, delete=False,
+    )
+    for node, script, _ in all_instance_nodes:
+        hostfile.write(f"{node}\n")
+    hostfile.close()
+    tmp_files.append(hostfile.name)
+
+    # Verify all instances use the same script (required for flat mpiexec).
+    scripts = {script for _, script, _ in all_instance_nodes}
+    if len(scripts) > 1:
+        print(
+            "Error: multiple model configs require MPMD support (not yet implemented).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    mpi_launch_cmd = [
+        "mpiexec", "-ppn", "1",
+        "--hostfile", hostfile.name,
+        "-o", f"{log_dir}/%r/%h/out.%R",
+        all_instance_nodes[0][1],
+    ]
+    _vlog(f"  [mpiexec] {shlex.join(mpi_launch_cmd)}")
+    proc = subprocess.Popen(mpi_launch_cmd, env=os.environ)
 
     total_instances = instance_idx
     t_wait_start = time.monotonic()
