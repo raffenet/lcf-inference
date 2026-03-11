@@ -341,12 +341,23 @@ def cmd_bench(args) -> None:
     hf_token = os.environ.get("HF_TOKEN")
 
     # Build mpiexec command: SPMD per port group, MPMD across groups
+    # Write each group's hosts to a temp hostfile (one host per line) to avoid
+    # ARG_MAX errors when the host list is large (e.g. 4096 instances).
     mpi_cmd: list[str] = ["mpiexec", "--no-abort-on-failure"]
+    hostfiles: list[tempfile.NamedTemporaryFile] = []
     first = True
     for port, hosts in hosts_by_port.items():
         if not first:
             mpi_cmd.append(":")
         first = False
+        hf = tempfile.NamedTemporaryFile(
+            mode="w", prefix="aegis_bench_hosts_", suffix=".txt",
+            dir=bench_base, delete=False,
+        )
+        hf.write("\n".join(hosts) + "\n")
+        hf.flush()
+        hf.close()
+        hostfiles.append(hf)
         vllm_args = [
             "vllm", "bench", "serve",
             "--model", args.model,
@@ -376,7 +387,7 @@ def cmd_bench(args) -> None:
         env_flags = ["-env", "HF_TOKEN", hf_token] if hf_token else []
         mpi_cmd.extend([
             "-n", str(len(hosts)),
-            "-hosts", ",".join(hosts),
+            "--hostfile", hf.name,
             *env_flags,
             *rank_cmd,
         ])
@@ -407,6 +418,11 @@ def cmd_bench(args) -> None:
             print("Warning: no benchmark result files found.", file=sys.stderr)
     finally:
         shutil.rmtree(result_dir, ignore_errors=True)
+        for hf in hostfiles:
+            try:
+                os.unlink(hf.name)
+            except OSError:
+                pass
 
 
 # ---------------------------------------------------------------------------
